@@ -2,13 +2,56 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import sys
 
 from phonemizer.backend import EspeakBackend
 from phonemizer.separator import Separator
 
 from corpusgen.g2p.result import G2PResult
+
+
+_ESPEAK_INSTALL_HELP = """
+===================================================================
+ espeak-ng not found — required by corpusgen for phoneme conversion
+===================================================================
+
+ Install espeak-ng for your platform:
+
+   Windows:  Download .msi from https://github.com/espeak-ng/espeak-ng/releases
+             Then set the environment variable:
+             [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY",
+                 "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll", "User")
+
+   macOS:    brew install espeak-ng
+
+   Linux:    sudo apt-get install espeak-ng
+
+ See https://github.com/jemsbhai/corpusgen#prerequisites for full instructions.
+===================================================================
+"""
+
+
+def _check_espeak_available() -> None:
+    """Verify espeak-ng is installed and the library is findable."""
+    try:
+        EspeakBackend.is_available()
+    except RuntimeError:
+        # Check if the DLL/so exists but env var is missing
+        if sys.platform == "win32":
+            default_dll = r"C:\Program Files\eSpeak NG\libespeak-ng.dll"
+            if os.path.exists(default_dll) and not os.environ.get(
+                "PHONEMIZER_ESPEAK_LIBRARY"
+            ):
+                raise RuntimeError(
+                    f"espeak-ng is installed but PHONEMIZER_ESPEAK_LIBRARY is not set.\n"
+                    f"Run this in PowerShell (then restart your terminal):\n\n"
+                    f'  [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY", '
+                    f'"{default_dll}", "User")\n'
+                ) from None
+        raise RuntimeError(_ESPEAK_INSTALL_HELP) from None
 
 
 # Separator config: space between phonemes, | between words, newline between utterances
@@ -58,6 +101,8 @@ class G2PManager:
         if backend not in ("espeak",):
             raise ValueError(f"Unsupported backend: {backend!r}. Supported: 'espeak'")
         self._backend_name = backend
+        if backend == "espeak":
+            _check_espeak_available()
         # Cache EspeakBackend instances per language
         self._backends: dict[str, EspeakBackend] = {}
 
