@@ -1,0 +1,102 @@
+[tool.poetry]
+name = "corpusgen"
+version = "0.1.0"
+description = "Language-agnostic framework for generating and evaluating speech corpora with maximal phoneme coverage"
+authors = ["Muntaser Syed"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/jemsbhai/corpusgen"
+repository = "https://github.com/jemsbhai/corpusgen"
+keywords = [
+    "speech-corpus",
+    "phoneme-coverage",
+    "tts",
+    "asr",
+    "corpus-generation",
+    "phonetics",
+    "ipa",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+packages = [{include = "corpusgen", from = "src"}]
+
+[tool.poetry.scripts]
+corpusgen = "corpusgen.cli:main"
+
+# --- Core dependencies ---
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+phonemizer = ">=3.3"
+panphon = ">=0.21"
+numpy = ">=1.24"
+pyyaml = ">=6.0"
+tqdm = ">=4.65"
+click = ">=8.1"
+
+# --- Optional dependency groups ---
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+pytest-cov = ">=5.0"
+ruff = ">=0.4"
+mypy = ">=1.9"
+pre-commit = ">=3.7"
+
+[tool.poetry.group.repository]
+optional = true
+[tool.poetry.group.repository.dependencies]
+datasets = ">=2.18"
+huggingface-hub = ">=0.20"
+
+[tool.poetry.group.llm]
+optional = true
+[tool.poetry.group.llm.dependencies]
+openai = ">=1.12"
+anthropic = ">=0.25"
+
+[tool.poetry.group.local]
+optional = true
+[tool.poetry.group.local.dependencies]
+torch = ">=2.1"
+transformers = ">=4.38"
+peft = ">=0.10"
+trl = ">=0.8"
+
+[tool.poetry.group.neural-g2p]
+optional = true
+[tool.poetry.group.neural-g2p.dependencies]
+transformers = ">=4.38"
+torch = ">=2.1"
+
+[tool.poetry.group.eval]
+optional = true
+[tool.poetry.group.eval.dependencies]
+scipy = ">=1.11"
+matplotlib = ">=3.8"
+
+# --- Build system ---
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# --- Tool configs ---
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
