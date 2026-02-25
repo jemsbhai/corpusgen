@@ -54,6 +54,7 @@ huggingface-hub = ">=0.20"
 [tool.poetry.group.llm]
 optional = true
 [tool.poetry.group.llm.dependencies]
+litellm = ">=1.40"
 openai = ">=1.12"
 anthropic = ">=0.25"
 
@@ -88,6 +89,7 @@ optional = true
 [tool.poetry.group.full.dependencies]
 datasets = ">=2.18"
 huggingface-hub = ">=0.20"
+litellm = ">=1.40"
 openai = ">=1.12"
 anthropic = ">=0.25"
 torch = ">=2.1"
