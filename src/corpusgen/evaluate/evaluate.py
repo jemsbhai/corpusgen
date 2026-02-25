@@ -11,7 +11,7 @@ from corpusgen.g2p.result import G2PResult
 def evaluate(
     sentences: list[str],
     language: str = "en-us",
-    target_phonemes: list[str] | None = None,
+    target_phonemes: list[str] | str | None = None,
     unit: str = "phoneme",
 ) -> EvaluationReport:
     """Evaluate a corpus of sentences for phoneme coverage.
@@ -26,7 +26,9 @@ def evaluate(
         target_phonemes: Target phoneme inventory to measure coverage against.
             If None, the inventory is derived from all unique phonemes found
             in the corpus (resulting in 100% coverage — useful for inventory
-            discovery).
+            discovery). If the string ``"phoible"``, the target is
+            automatically fetched from the PHOIBLE database for the given
+            language (requires cached PHOIBLE data).
         unit: Coverage unit type — "phoneme", "diphone", or "triphone".
 
     Returns:
@@ -41,6 +43,13 @@ def evaluate(
         raise ValueError(
             f"Invalid unit: {unit!r}. Must be one of {valid_units}"
         )
+
+    # --- Step 0: Resolve "phoible" shortcut ---
+    if isinstance(target_phonemes, str) and target_phonemes.lower() == "phoible":
+        from corpusgen.inventory.phoible import PhoibleDataset
+        ds = PhoibleDataset()
+        inv = ds.get_inventory_for_espeak(language)
+        target_phonemes = inv.phonemes
 
     # --- Step 1: Phonemize all sentences ---
     g2p = G2PManager()

@@ -327,7 +327,49 @@ class PhoibleDataset:
         sources = {self._inventories[i].source for i in inv_ids}
         return sorted(sources)
 
-    # --- Download (stub for now) ---
+    # --- Espeak convenience methods ---
+
+    def get_inventory_for_espeak(
+        self, espeak_code: str, source: str | None = None
+    ) -> Inventory:
+        """Get an inventory using an espeak-ng voice code.
+
+        Maps the espeak code to ISO 639-3 via the bundled mapping,
+        then looks up the PHOIBLE inventory.
+
+        Args:
+            espeak_code: espeak-ng voice identifier (e.g., 'en-us').
+            source: Optional PHOIBLE source filter.
+
+        Returns:
+            An Inventory object.
+
+        Raises:
+            KeyError: If the espeak code or resulting ISO is not found.
+        """
+        from corpusgen.inventory.mapping import EspeakMapping
+        mapping = EspeakMapping()
+        iso = mapping.to_iso(espeak_code)
+        return self.get_inventory(iso, source=source)
+
+    def get_union_inventory_for_espeak(self, espeak_code: str) -> Inventory:
+        """Get the union inventory using an espeak-ng voice code.
+
+        Args:
+            espeak_code: espeak-ng voice identifier (e.g., 'en-us').
+
+        Returns:
+            A synthetic union Inventory.
+
+        Raises:
+            KeyError: If the espeak code or resulting ISO is not found.
+        """
+        from corpusgen.inventory.mapping import EspeakMapping
+        mapping = EspeakMapping()
+        iso = mapping.to_iso(espeak_code)
+        return self.get_union_inventory(iso)
+
+    # --- Download ---
 
     def download(self) -> None:
         """Download phoible.csv from GitHub and cache locally.
