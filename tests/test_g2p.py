@@ -143,6 +143,42 @@ class TestG2PManager:
         assert len(results) == 3
         assert all(isinstance(r, G2PResult) for r in results)
 
+    def test_phonemize_batch_with_empty_strings(self, manager):
+        """Batch with empty strings must preserve alignment.
+
+        Regression: phonemizer drops empty utterances, so naive zip
+        misaligns outputs. Results must match input order exactly.
+        """
+        texts = ["hello", "", "world", "  ", "test"]
+        results = manager.phonemize_batch(texts, language="en-us")
+        assert len(results) == 5
+        # Index 0: "hello" → has phonemes
+        assert results[0].text == "hello"
+        assert len(results[0].phonemes) > 0
+        # Index 1: "" → empty result
+        assert results[1].text == ""
+        assert results[1].phonemes == []
+        assert results[1].ipa == ""
+        # Index 2: "world" → has phonemes
+        assert results[2].text == "world"
+        assert len(results[2].phonemes) > 0
+        # Index 3: "  " → whitespace-only, empty result
+        assert results[3].phonemes == []
+        # Index 4: "test" → has phonemes
+        assert results[4].text == "test"
+        assert len(results[4].phonemes) > 0
+
+    def test_phonemize_batch_all_empty(self, manager):
+        """Batch of all empty strings returns all empty results."""
+        texts = ["", "", ""]
+        results = manager.phonemize_batch(texts, language="en-us")
+        assert len(results) == 3
+        assert all(r.phonemes == [] for r in results)
+
+    def test_phonemize_batch_empty_list(self, manager):
+        """Empty input list returns empty output."""
+        assert manager.phonemize_batch([], language="en-us") == []
+
     def test_phonemize_variants(self, manager):
         """Get multiple pronunciation variants for a word."""
         variants = manager.phonemize_variants("the", language="en-us")
@@ -155,4 +191,22 @@ class TestG2PManager:
         languages = manager.supported_languages()
         assert isinstance(languages, list)
         assert len(languages) > 0
-        assert "en-us" in languages or "en" in languages
+        # Must contain actual language codes, not file paths
+        for lang in languages:
+            assert "\\" not in lang, f"File path leaked into language code: {lang}"
+            assert "/" not in lang, f"File path leaked into language code: {lang}"
+
+    def test_supported_languages_contains_english(self, manager):
+        """English must be in the supported languages list."""
+        languages = manager.supported_languages()
+        has_english = any(lang.startswith("en") for lang in languages)
+        assert has_english, f"No English variant found in: {languages[:10]}..."
+
+
+class TestG2PImports:
+    """Test that g2p subpackage exports are accessible."""
+
+    def test_import_from_g2p(self):
+        from corpusgen.g2p import G2PManager, G2PResult
+        assert G2PManager is not None
+        assert G2PResult is not None

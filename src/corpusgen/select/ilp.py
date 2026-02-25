@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 
 from corpusgen.select.base import SelectorBase
@@ -105,7 +106,7 @@ class ILPSelector(SelectorBase):
 
         # Determine required coverage count
         target_count = len(target_units)
-        required_covered = int(target_coverage * target_count)
+        required_covered = int(math.ceil(target_coverage * target_count))
         # Cap at what's actually coverable
         coverable_target = coverable & target_units
         required_covered = min(required_covered, len(coverable_target))

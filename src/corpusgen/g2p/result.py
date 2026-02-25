@@ -1,6 +1,6 @@
 """G2PResult: data container for grapheme-to-phoneme conversion output."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)

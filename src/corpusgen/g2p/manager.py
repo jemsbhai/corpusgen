@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import re
-import subprocess
 import sys
 
 from phonemizer.backend import EspeakBackend
@@ -37,7 +36,9 @@ _ESPEAK_INSTALL_HELP = """
 def _check_espeak_available() -> None:
     """Verify espeak-ng is installed and the library is findable."""
     try:
-        EspeakBackend.is_available()
+        available = EspeakBackend.is_available()
+        if not available:
+            raise RuntimeError(_ESPEAK_INSTALL_HELP)
     except RuntimeError:
         # Check if the DLL/so exists but env var is missing
         if sys.platform == "win32":
@@ -155,32 +156,54 @@ class G2PManager:
     ) -> list[G2PResult]:
         """Phonemize multiple texts efficiently.
 
+        Pre-filters empty/whitespace-only strings to avoid misalignment,
+        since phonemizer may drop empty utterances from its output.
+
         Args:
             texts: List of input texts.
             language: Language code.
 
         Returns:
-            List of G2PResult, one per input text.
+            List of G2PResult, one per input text (order preserved).
         """
         if not texts:
             return []
 
-        backend = self._get_espeak_backend(language)
-        ipa_list = backend.phonemize(texts, separator=_PHONEME_SEP, strip=True)
+        # Separate non-empty texts from empty ones to avoid misalignment.
+        # phonemizer can drop empty utterances, breaking naive zip.
+        non_empty_indices: list[int] = []
+        non_empty_texts: list[str] = []
+        for i, text in enumerate(texts):
+            if text and text.strip():
+                non_empty_indices.append(i)
+                non_empty_texts.append(text)
 
-        results = []
-        for text, ipa_raw in zip(texts, ipa_list):
-            if not text or not text.strip():
+        # Phonemize only non-empty texts
+        ipa_map: dict[int, str] = {}
+        if non_empty_texts:
+            backend = self._get_espeak_backend(language)
+            ipa_list = backend.phonemize(
+                non_empty_texts, separator=_PHONEME_SEP, strip=True
+            )
+            for idx, ipa_raw in zip(non_empty_indices, ipa_list):
+                ipa_map[idx] = ipa_raw
+
+        # Reassemble results in original order
+        results: list[G2PResult] = []
+        for i, text in enumerate(texts):
+            if i in ipa_map:
+                ipa_raw = ipa_map[i]
+                phonemes = _parse_phonemes(ipa_raw)
+                ipa_clean = re.sub(r"\s+", " ", ipa_raw.replace("|", " ").strip())
+                results.append(
+                    G2PResult(
+                        text=text, ipa=ipa_clean, phonemes=phonemes, language=language
+                    )
+                )
+            else:
                 results.append(
                     G2PResult(text=text, ipa="", phonemes=[], language=language)
                 )
-                continue
-
-            phonemes = _parse_phonemes(ipa_raw)
-            ipa_clean = re.sub(r"\s+", " ", ipa_raw.replace("|", " ").strip())
-            results.append(
-                G2PResult(text=text, ipa=ipa_clean, phonemes=phonemes, language=language)
-            )
 
         return results
 
@@ -213,9 +236,9 @@ class G2PManager:
             "en-gb": ["en-us"],
             "fr": ["fr-fr", "fr-be"],
             "fr-fr": ["fr-be"],
-            "pt": ["pt", "pt-br"],
+            "pt": ["pt-br"],
             "pt-br": ["pt"],
-            "es": ["es", "es-la"],
+            "es": ["es-la"],
             "es-la": ["es"],
         }
 
@@ -237,25 +260,12 @@ class G2PManager:
         """List languages supported by the current backend.
 
         Returns:
-            Sorted list of language codes.
+            Sorted list of language codes (e.g., 'en-us', 'fr-fr').
         """
         try:
-            output = subprocess.run(
-                ["espeak-ng", "--voices"],
-                capture_output=True,
-                check=True,
-            )
-            stdout = output.stdout.decode("utf-8", errors="replace")
-            languages = set()
-            for line in stdout.strip().split("\n")[1:]:  # skip header
-                parts = line.split()
-                if len(parts) >= 5:
-                    raw_lang = parts[4]
-                    # Windows espeak-ng prefixes with family: 'gmw\en-US' -> 'en-US'
-                    if "\\" in raw_lang:
-                        raw_lang = raw_lang.split("\\")[-1]
-                    languages.add(raw_lang.lower())
-            return sorted(languages)
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            # Use phonemizer's API — reliable across platforms
+            lang_dict = EspeakBackend.supported_languages()
+            return sorted(lang_dict.keys())
+        except Exception:
             # Fallback: return languages we know espeak-ng supports
             return ["en-us", "en-gb", "fr-fr", "de", "es", "ar", "bn", "zh"]

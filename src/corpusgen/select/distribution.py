@@ -142,7 +142,7 @@ class DistributionAwareSelector(SelectorBase):
                 if (kl < best_score) or (kl == best_score and wgain > best_gain):
                     best_score = kl
                     best_idx = idx
-                    best_gain = gain
+                    best_gain = wgain
 
             if best_idx == -1:
                 break

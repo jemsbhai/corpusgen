@@ -86,11 +86,20 @@ class EvaluationReport:
         else:
             raise ValueError(f"Unknown verbosity: {verbosity!r}")
 
+    MAX_MISSING_DISPLAY = 50
+
     def _render_minimal(self) -> str:
         covered = len(self.covered_phonemes)
         total = len(self.target_phonemes)
         pct = self.coverage * 100
-        missing_str = ", ".join(sorted(self.missing_phonemes))
+
+        missing_sorted = sorted(self.missing_phonemes)
+        if len(missing_sorted) > self.MAX_MISSING_DISPLAY:
+            truncated = ", ".join(missing_sorted[: self.MAX_MISSING_DISPLAY])
+            remaining = len(missing_sorted) - self.MAX_MISSING_DISPLAY
+            missing_str = f"{truncated} (+{remaining} more)"
+        else:
+            missing_str = ", ".join(missing_sorted)
 
         lines = [
             f"Coverage: {pct:.1f}% ({covered}/{total} {self.unit}s)",

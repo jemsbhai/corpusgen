@@ -13,12 +13,12 @@ from corpusgen.select.distribution import DistributionAwareSelector
 try:
     from corpusgen.select.ilp import ILPSelector
 except ImportError:
-    pass
+    ILPSelector = None  # type: ignore[assignment, misc]
 
 try:
     from corpusgen.select.nsga2 import NSGA2Selector
 except ImportError:
-    pass
+    NSGA2Selector = None  # type: ignore[assignment, misc]
 
 
 # Algorithms that need no optional dependencies
@@ -121,7 +121,7 @@ def select_sentences(
     from corpusgen.coverage.tracker import CoverageTracker
 
     tracker = CoverageTracker(target_phonemes=target_phonemes, unit=unit)
-    target_units = set(tracker._target_set)
+    target_units = tracker.target_units
 
     # --- Instantiate the selector ---
     selector = _make_selector(algorithm, unit, **algorithm_kwargs)
@@ -181,7 +181,9 @@ __all__ = [
     "CELFSelector",
     "StochasticGreedySelector",
     "DistributionAwareSelector",
-    "ILPSelector",
-    "NSGA2Selector",
     "select_sentences",
 ]
+if ILPSelector is not None:
+    __all__.append("ILPSelector")
+if NSGA2Selector is not None:
+    __all__.append("NSGA2Selector")

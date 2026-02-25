@@ -73,7 +73,10 @@ def evaluate(
     if unit == "phoneme":
         target_units_list = list(target_phonemes)
     else:
-        target_units_list = sorted(tracker._target_set)
+        target_units_list = sorted(tracker.target_units)
+
+    # Cache target unit set for loop lookups
+    target_set = tracker.target_units
 
     # Track which target-units are first seen per sentence (for new_phonemes)
     seen_target_units: set[str] = set()
@@ -103,7 +106,6 @@ def evaluate(
         tracker.update(phonemes, sentence_index=idx)
 
         # Determine which target-units are NEW from this sentence
-        target_set = tracker._target_set
         new_units = []
         for u in sentence_units:
             if u in target_set and u not in seen_target_units:
@@ -133,7 +135,7 @@ def evaluate(
         language=language,
         unit=unit,
         target_phonemes=target_units_list,
-        covered_phonemes=set(tracker._covered),
+        covered_phonemes=tracker.covered_units,
         missing_phonemes=set(tracker.missing),
         coverage=tracker.coverage,
         phoneme_counts=tracker.phoneme_counts,

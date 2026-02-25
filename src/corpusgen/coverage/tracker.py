@@ -18,8 +18,14 @@ class CoverageTracker:
     """
 
     _VALID_UNITS = ("phoneme", "diphone", "triphone")
+    DEFAULT_MAX_TARGET_SIZE = 500_000
 
-    def __init__(self, target_phonemes: list[str], unit: str = "phoneme") -> None:
+    def __init__(
+        self,
+        target_phonemes: list[str],
+        unit: str = "phoneme",
+        max_target_size: int | None = None,
+    ) -> None:
         if unit not in self._VALID_UNITS:
             raise ValueError(
                 f"Invalid unit: {unit!r}. Must be one of {self._VALID_UNITS}"
@@ -27,14 +33,32 @@ class CoverageTracker:
         self._unit = unit
         self._target_phonemes = list(target_phonemes)
 
+        limit = max_target_size if max_target_size is not None else self.DEFAULT_MAX_TARGET_SIZE
+
         # Build the target set based on unit type
         if unit == "phoneme":
             self._target_set = set(target_phonemes)
         elif unit == "diphone":
+            n = len(target_phonemes)
+            expected_size = n * n
+            if expected_size > limit:
+                raise ValueError(
+                    f"Theoretical diphone target space ({expected_size:,} = {n}^2) "
+                    f"exceeds max_target_size ({limit:,}). "
+                    f"Reduce the phoneme inventory or increase max_target_size."
+                )
             self._target_set = {
                 f"{a}-{b}" for a, b in product(target_phonemes, repeat=2)
             }
         elif unit == "triphone":
+            n = len(target_phonemes)
+            expected_size = n * n * n
+            if expected_size > limit:
+                raise ValueError(
+                    f"Theoretical triphone target space ({expected_size:,} = {n}^3) "
+                    f"exceeds max_target_size ({limit:,}). "
+                    f"Reduce the phoneme inventory or increase max_target_size."
+                )
             self._target_set = {
                 f"{a}-{b}-{c}" for a, b, c in product(target_phonemes, repeat=3)
             }
@@ -48,6 +72,11 @@ class CoverageTracker:
     def unit(self) -> str:
         """Coverage unit type."""
         return self._unit
+
+    @property
+    def target_units(self) -> set[str]:
+        """Full set of target units (phonemes, diphones, or triphones)."""
+        return set(self._target_set)
 
     @property
     def target_size(self) -> int:
@@ -65,6 +94,11 @@ class CoverageTracker:
         if self.target_size == 0:
             return 1.0
         return self.covered_count / self.target_size
+
+    @property
+    def covered_units(self) -> set[str]:
+        """Set of target units covered so far."""
+        return set(self._covered)
 
     @property
     def missing(self) -> set[str]:

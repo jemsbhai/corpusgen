@@ -27,13 +27,43 @@ def uniform_weights(target_units: set[str]) -> dict[str, float]:
     return {u: 1.0 for u in target_units}
 
 
+def _extract_units(phonemes: list[str], unit: str) -> list[str]:
+    """Extract coverage units from a phoneme list.
+
+    Uses the same logic as selection and tracking modules:
+    phoneme → raw list, diphone → consecutive pairs, triphone → triples.
+
+    Args:
+        phonemes: Phoneme list for a single sentence.
+        unit: One of "phoneme", "diphone", "triphone".
+
+    Returns:
+        List of unit strings.
+    """
+    if unit == "phoneme":
+        return list(phonemes)
+    elif unit == "diphone":
+        return [
+            f"{phonemes[i]}-{phonemes[i + 1]}"
+            for i in range(len(phonemes) - 1)
+        ]
+    elif unit == "triphone":
+        return [
+            f"{phonemes[i]}-{phonemes[i + 1]}-{phonemes[i + 2]}"
+            for i in range(len(phonemes) - 2)
+        ]
+    else:
+        raise ValueError(f"Invalid unit: {unit!r}")
+
+
 def frequency_inverse_weights(
     target_units: set[str],
     corpus_phonemes: list[list[str]],
+    unit: str = "phoneme",
 ) -> dict[str, float]:
     """Weight units inversely proportional to their corpus frequency.
 
-    Rare phonemes receive higher weights, ensuring they are prioritised
+    Rare units receive higher weights, ensuring they are prioritised
     during selection. Uses smoothed inverse frequency: weight(u) =
     log(N / (count(u) + 1)) where N is total token count.
 
@@ -42,6 +72,9 @@ def frequency_inverse_weights(
     Args:
         target_units: Set of phonetic units to weight.
         corpus_phonemes: List of phoneme lists from the candidate corpus.
+        unit: Coverage unit type — "phoneme", "diphone", or "triphone".
+            Must match the unit type used for target_units. Defaults to
+            "phoneme" for backward compatibility.
 
     Returns:
         Mapping from each unit to its inverse-frequency weight.
@@ -49,10 +82,10 @@ def frequency_inverse_weights(
     if not target_units:
         return {}
 
-    # Count occurrences across the corpus
+    # Count occurrences using the correct unit extraction
     counts: Counter[str] = Counter()
     for phonemes in corpus_phonemes:
-        counts.update(phonemes)
+        counts.update(_extract_units(phonemes, unit))
 
     total = sum(counts.values()) if counts else 1
 
