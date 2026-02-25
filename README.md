@@ -4,22 +4,28 @@
 
 `corpusgen` helps you build phonetically-balanced text corpora for speech synthesis (TTS), speech recognition (ASR), and clinical speech assessment — in any language.
 
-## Features
+## What's Working Now (v0.1.0-alpha)
 
-- **Evaluate** any text corpus against phoneme coverage targets
-- **Generate** phonetically-balanced corpora using three strategies:
-  - 📚 **Repository**: Select from curated multilingual sentence banks (offline, deterministic)
-  - 🤖 **LLM API**: Generate targeted sentences via OpenAI/Anthropic/Ollama
-  - 🧠 **Local Model**: Fine-tuned Phon-CTG model on your own GPU
-- **Multi-dialect support**: Handles pronunciation variants automatically
-- **Flexible targeting**: Balanced, natural-distribution, or custom-weighted phoneme distributions
-- **100+ languages** via PHOIBLE inventories and multi-backend G2P
+- **Evaluate** any text corpus for phoneme, diphone, or triphone coverage
+- **PHOIBLE integration** — phoneme inventories for 2,186 languages (3,020 inventories)
+- **Grapheme-to-phoneme** via espeak-ng for 100+ languages
+- **Espeak ↔ PHOIBLE mapping** — seamless bridge between G2P and phonological databases
+- **Structured reports** — three verbosity levels, JSON export, JSON-LD-EX compatibility
+- **40-language test suite** — validated across 12 language families
+
+### Coming Soon
+
+- 📚 **Repository-based generation** — curated sentence banks on HuggingFace Hub
+- 🤖 **LLM API generation** — targeted sentences via OpenAI/Anthropic/Ollama
+- 🧠 **Phon-CTG** — fine-tuned local model for phoneme-targeted generation (the core research contribution)
+- **Selection algorithms** — greedy/CELF sentence selection with coverage optimization
+- **CLI** — command-line interface for all operations
 
 ## Prerequisites
 
 ### espeak-ng (required)
 
-corpusgen uses [espeak-ng](https://github.com/espeak-ng/espeak-ng) as its core grapheme-to-phoneme engine. It converts text to IPA phonemes for 100+ languages. **You must install it before using corpusgen.**
+`corpusgen` uses [espeak-ng](https://github.com/espeak-ng/espeak-ng) for grapheme-to-phoneme conversion. Install it before using corpusgen.
 
 <details>
 <summary><strong>Windows</strong></summary>
@@ -29,15 +35,13 @@ corpusgen uses [espeak-ng](https://github.com/espeak-ng/espeak-ng) as its core g
 3. Set the environment variable so Python can find the shared library:
 
 ```powershell
-# Permanent (restart terminal after running)
 [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY", "C:\Program Files\eSpeak NG\libespeak-ng.dll", "User")
 ```
 
-4. Verify installation:
+4. Restart your terminal and verify:
 
 ```powershell
 espeak-ng --version
-# Expected: eSpeak NG text-to-speech: 1.51+  (or newer)
 ```
 
 </details>
@@ -49,42 +53,13 @@ espeak-ng --version
 brew install espeak-ng
 ```
 
-Verify:
-```bash
-espeak-ng --version
-```
-
-The library is typically found automatically at `/opt/homebrew/lib/libespeak-ng.dylib`. If not:
-```bash
-export PHONEMIZER_ESPEAK_LIBRARY=$(brew --prefix espeak-ng)/lib/libespeak-ng.dylib
-```
-
-Add the export line to your `~/.zshrc` or `~/.bashrc` to make it permanent.
-
 </details>
 
 <details>
 <summary><strong>Linux (Ubuntu/Debian)</strong></summary>
 
 ```bash
-sudo apt-get update
-sudo apt-get install espeak-ng
-```
-
-Verify:
-```bash
-espeak-ng --version
-```
-
-The library is typically found automatically at `/usr/lib/x86_64-linux-gnu/libespeak-ng.so`.
-
-</details>
-
-<details>
-<summary><strong>Linux (Fedora/RHEL)</strong></summary>
-
-```bash
-sudo dnf install espeak-ng
+sudo apt-get update && sudo apt-get install -y espeak-ng
 ```
 
 </details>
@@ -96,91 +71,199 @@ sudo dnf install espeak-ng
 RUN apt-get update && apt-get install -y espeak-ng && rm -rf /var/lib/apt/lists/*
 ```
 
-For GitHub Actions:
-```yaml
-- name: Install espeak-ng
-  run: sudo apt-get update && sudo apt-get install -y espeak-ng
-```
-
 </details>
 
-### Verifying the full setup
+### PHOIBLE data (recommended)
 
-After installing espeak-ng, run this to confirm everything works:
+To use PHOIBLE phoneme inventories (2,186 languages), download the data on first use:
 
 ```python
-python -c "from phonemizer.backend import EspeakBackend; b = EspeakBackend('en-us'); print(b.phonemize(['hello world'])); print('OK')"
+from corpusgen.inventory import PhoibleDataset
+PhoibleDataset().download()  # cached at ~/.corpusgen/phoible.csv (~24 MB)
 ```
 
-Expected output:
-```
-['həloʊ wɜːld ']
-OK
-```
-
-If you see `RuntimeError: espeak not installed on your system`, the `PHONEMIZER_ESPEAK_LIBRARY` environment variable is not set correctly. See the platform-specific instructions above.
+This only needs to be done once.
 
 ## Installation
 
-```bash
-# Core (evaluation + selection + rule-based G2P)
-pip install corpusgen
-
-# With HuggingFace sentence bank access
-pip install corpusgen[repository]
-
-# With LLM generation
-pip install corpusgen[llm]
-
-# Everything
-pip install corpusgen[all]
-```
-
-### Development setup
+### Development setup (current)
 
 ```bash
 git clone https://github.com/jemsbhai/corpusgen.git
 cd corpusgen
-poetry install          # installs core + dev dependencies
-poetry run pytest       # run tests
+poetry install
+poetry run pytest
+```
+
+### PyPI (coming soon)
+
+```bash
+pip install corpusgen
 ```
 
 ## Quick Start
 
+### Evaluate a corpus for phoneme coverage
+
 ```python
-from corpusgen import evaluate, generate
+import corpusgen
 
-# Evaluate an existing corpus
-report = evaluate(
-    text=["The quick brown fox jumps over the lazy dog."],
-    language="en",
+# Evaluate against the PHOIBLE inventory for English
+report = corpusgen.evaluate(
+    ["The quick brown fox jumps over the lazy dog.",
+     "She sells seashells by the seashore.",
+     "Pack my box with five dozen liquor jugs."],
+    language="en-us",
+    target_phonemes="phoible",
 )
-print(report.coverage)       # 0.42 (42% of English phonemes covered)
-print(report.missing)        # ['ʒ', 'θ', 'ð', ...]
 
-# Generate a phonetically-balanced corpus
-corpus = generate(
-    language="en",
-    strategy="repository",   # or "llm" or "local"
-    target_coverage=0.95,
-    n_sentences=200,
-)
-print(corpus.sentences)
-print(corpus.coverage)       # 0.97
+print(report.render())
+# Coverage: 65.0% (26/40 phonemes)
+# Missing: ʒ, ð, θ, ...
+
+print(report.coverage)           # 0.65
+print(report.missing_phonemes)   # {'ʒ', 'ð', 'θ', ...}
+print(report.covered_phonemes)   # {'p', 'b', 't', 'd', ...}
 ```
+
+### Discover what phonemes are in your corpus
+
+```python
+import corpusgen
+
+# No target = derive inventory from the text itself
+report = corpusgen.evaluate(
+    ["Hello world."],
+    language="en-us",
+)
+print(report.target_phonemes)    # all phonemes found in the text
+print(report.coverage)           # 1.0 (100% by definition)
+```
+
+### Use PHOIBLE inventories directly
+
+```python
+from corpusgen import get_inventory
+
+# Get the PHOIBLE inventory via espeak code
+inv = get_inventory("en-us")
+print(inv.language_name)          # 'English'
+print(inv.consonants)             # ['p', 'b', 't', 'd', 'k', ...]
+print(inv.vowels)                 # ['iː', 'ɪ', 'ɛ', 'æ', ...]
+print(inv.has_tones)              # False
+print(inv.consonant_count)        # 27
+print(inv.vowel_count)            # 13
+
+# Query by distinctive features
+nasals = inv.segments_with_feature("nasal", "+")
+print([s.phoneme for s in nasals])  # ['m', 'n', 'ŋ']
+
+# Get all inventories for a language (different sources/dialects)
+from corpusgen.inventory import PhoibleDataset
+ds = PhoibleDataset()
+all_eng = ds.get_all_inventories("eng")
+print(f"English has {len(all_eng)} inventories in PHOIBLE")
+
+# Union inventory (maximally inclusive)
+union = ds.get_union_inventory("eng")
+print(f"Union: {union.size} segments from all sources")
+```
+
+### Evaluate with diphone or triphone coverage
+
+```python
+import corpusgen
+
+report = corpusgen.evaluate(
+    ["The quick brown fox jumps."],
+    language="en-us",
+    target_phonemes="phoible",
+    unit="diphone",
+)
+print(f"Diphone coverage: {report.coverage:.1%}")
+```
+
+### Work with multiple languages
+
+```python
+import corpusgen
+
+for lang in ["en-us", "fr-fr", "de", "ar", "hi", "ja", "cmn"]:
+    report = corpusgen.evaluate(
+        ["Hello world."],  # espeak handles transliteration
+        language=lang,
+    )
+    print(f"{lang}: {len(report.target_phonemes)} unique phonemes")
+```
+
+### Export reports
+
+```python
+import corpusgen
+
+report = corpusgen.evaluate(
+    ["The quick brown fox."],
+    language="en-us",
+    target_phonemes="phoible",
+)
+
+# JSON
+print(report.to_json(indent=2))
+
+# JSON-LD (linked data)
+doc = report.to_jsonld_ex()
+
+# Python dict
+d = report.to_dict()
+
+# Human-readable at different verbosity levels
+from corpusgen.evaluate.report import Verbosity
+print(report.render(verbosity=Verbosity.MINIMAL))   # coverage + missing
+print(report.render(verbosity=Verbosity.NORMAL))     # + per-phoneme counts
+print(report.render(verbosity=Verbosity.VERBOSE))    # + per-sentence breakdown
+```
+
+## Architecture
+
+```
+corpusgen/
+├── g2p/                  # Grapheme-to-phoneme conversion
+│   ├── manager.py        # G2PManager — multi-backend G2P (espeak-ng)
+│   └── result.py         # G2PResult — phonemes, diphones, triphones
+├── coverage/
+│   └── tracker.py        # CoverageTracker — phoneme/diphone/triphone tracking
+├── evaluate/
+│   ├── evaluate.py       # evaluate() — top-level user-facing API
+│   └── report.py         # EvaluationReport, SentenceDetail, Verbosity
+├── inventory/
+│   ├── models.py         # Segment (38 features), Inventory
+│   ├── phoible.py        # PhoibleDataset — PHOIBLE CSV loader/cache/query
+│   └── mapping.py        # EspeakMapping — espeak ↔ ISO 639-3
+├── data/
+│   └── espeak_iso_mapping.json  # Bundled voice code mapping
+├── generate/             # (Phase 3-5: repository, LLM, local)
+├── select/               # (Phase 3: greedy/CELF selection)
+└── weights/              # (Phase 3: phoneme weighting)
+```
+
+## Language Support
+
+`corpusgen` supports any language available in both espeak-ng and PHOIBLE:
+
+- **G2P (espeak-ng):** 100+ languages
+- **Inventories (PHOIBLE):** 2,186 languages, 3,020 inventories, 8 sources
+- **Tested across:** 40 languages, 12 language families, 10+ scripts
+
+The espeak-to-PHOIBLE mapping covers 85+ languages with automatic macrolanguage resolution (e.g., `ms` → Standard Malay, `sw` → Swahili).
 
 ## Reproducibility
 
 For reproducible results across machines:
 
-1. **Pin corpusgen version**: `pip install corpusgen==0.1.0`
-2. **Pin espeak-ng version**: Record the output of `espeak-ng --version` in your experiment logs
-3. **Use `poetry.lock`**: If developing with Poetry, the lock file pins all transitive dependencies
-4. **Repository strategy is deterministic**: Given the same sentence bank version and parameters, output is identical
-
-## Documentation
-
-*Coming soon*
+1. **Pin corpusgen version** in your dependency file
+2. **Pin espeak-ng version**: Record `espeak-ng --version` in experiment logs
+3. **Use `poetry.lock`**: Pins all transitive dependencies
+4. **Record PHOIBLE version**: Note the download date of `~/.corpusgen/phoible.csv`
 
 ## Citation
 

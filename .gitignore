@@ -62,3 +62,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Temp test/debug output
+*_results*.txt
+espeak_voices.txt
