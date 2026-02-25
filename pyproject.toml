@@ -63,6 +63,7 @@ optional = true
 [tool.poetry.group.local.dependencies]
 torch = ">=2.1"
 transformers = ">=4.38"
+bitsandbytes = ">=0.43"
 peft = ">=0.10"
 trl = ">=0.8"
 
