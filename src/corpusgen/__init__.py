@@ -4,6 +4,7 @@ __version__ = "0.1.0"
 
 from corpusgen.evaluate import evaluate
 from corpusgen.inventory.models import Inventory
+from corpusgen.select import select_sentences
 
 
 def get_inventory(
@@ -43,4 +44,4 @@ def get_inventory(
     return ds.get_inventory(language, source=source)
 
 
-__all__ = ["evaluate", "get_inventory", "Inventory", "__version__"]
+__all__ = ["evaluate", "get_inventory", "select_sentences", "Inventory", "__version__"]

@@ -47,6 +47,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 209 integration tests with real PHOIBLE data across 32 languages
 - 31 wiring tests for convenience API
 
+#### Phase 3 — Selection Algorithms
+- `SelectorBase` ABC: common interface for all selection algorithms with `_extract_units()`, `_extract_unit_list()`, `_weighted_gain()` shared helpers
+- `SelectionResult` frozen dataclass: selected indices/sentences, coverage, covered/missing units, timing, algorithm-specific metadata
+- `GreedySelector`: standard greedy Set Cover with ln(n)+1 approximation (Chvátal 1979)
+- `CELFSelector`: Cost-Effective Lazy Forward optimization — identical results to greedy, up to 700× faster via submodularity-based lazy evaluation (Leskovec et al. 2007)
+- `StochasticGreedySelector`: randomized subsampling achieving (1-1/e-ε) approximation in O(n·log(1/ε)) time (Mirzasoleiman et al. 2015)
+- `ILPSelector`: exact optimal Set Cover via Integer Linear Programming using PuLP/CBC solver — ground-truth baseline for benchmarking (optional dependency: `pulp`)
+- `DistributionAwareSelector`: KL-divergence minimization for frequency-distribution matching — addresses skewed coverage limitation of pure Set Cover
+- `NSGA2Selector`: multi-objective Pareto optimization over coverage, sentence count, and optionally KL-divergence via pymoo (optional dependency: `pymoo`)
+- All 6 selectors support optional `weights` parameter for weighted marginal gain
+- `select_sentences()` top-level dispatcher: handles G2P, target resolution (`"phoible"` shortcut), and algorithm dispatch with `**algorithm_kwargs` pass-through
+- Phoneme weighting strategies: `uniform_weights()`, `frequency_inverse_weights()`, `linguistic_class_weights()` (vowel/consonant classification via Unicode-based IPA analysis)
+- Optional dependency groups: `corpusgen[optimization]` (pulp + pymoo), `corpusgen[full]` (all optional dependencies)
+- 12 integration tests: end-to-end G2P → selection → evaluation pipeline, algorithm comparison, weighted selection, ILP optimality verification
+
 ### Infrastructure
 - Project scaffold: `src/corpusgen/` layout with Poetry 2.3.2
 - Apache 2.0 license

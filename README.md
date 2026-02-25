@@ -13,12 +13,20 @@
 - **Structured reports** — three verbosity levels, JSON export, JSON-LD-EX compatibility
 - **40-language test suite** — validated across 12 language families
 
+- **6 selection algorithms** for corpus optimization:
+  - **Greedy Set Cover** — ln(n)+1 approximation, the standard workhorse
+  - **CELF** — lazy evaluation speedup, identical results up to 700× faster
+  - **Stochastic Greedy** — (1-1/e-ε) approximation, scales to massive corpora
+  - **ILP** — exact optimal solutions via Integer Linear Programming (ground truth)
+  - **Distribution-Aware** — KL-divergence minimization for frequency matching
+  - **NSGA-II** — multi-objective Pareto optimization (coverage × cost × distribution)
+- **Phoneme weighting** — uniform, frequency-inverse, and linguistic class strategies
+
 ### Coming Soon
 
 - 📚 **Repository-based generation** — curated sentence banks on HuggingFace Hub
 - 🤖 **LLM API generation** — targeted sentences via OpenAI/Anthropic/Ollama
 - 🧠 **Phon-CTG** — fine-tuned local model for phoneme-targeted generation (the core research contribution)
-- **Selection algorithms** — greedy/CELF sentence selection with coverage optimization
 - **CLI** — command-line interface for all operations
 
 ## Prerequisites
@@ -196,6 +204,89 @@ for lang in ["en-us", "fr-fr", "de", "ar", "hi", "ja", "cmn"]:
     print(f"{lang}: {len(report.target_phonemes)} unique phonemes")
 ```
 
+### Select optimal sentences from a candidate pool
+
+```python
+import corpusgen
+
+candidates = [
+    "The quick brown fox jumps over the lazy dog.",
+    "She sells seashells by the seashore.",
+    "Peter Piper picked a peck of pickled peppers.",
+    "How much wood would a woodchuck chuck?",
+    "To be or not to be, that is the question.",
+    # ... hundreds or thousands of candidates
+]
+
+# Greedy selection for maximal phoneme coverage
+result = corpusgen.select_sentences(
+    candidates,
+    language="en-us",
+    algorithm="greedy",  # or "celf", "stochastic", "ilp", "distribution", "nsga2"
+)
+
+print(f"Selected {result.num_selected} of {len(candidates)} sentences")
+print(f"Coverage: {result.coverage:.1%}")
+print(f"Missing: {result.missing_units}")
+
+# Use budget constraints
+result = corpusgen.select_sentences(
+    candidates,
+    language="en-us",
+    algorithm="greedy",
+    max_sentences=5,          # select at most 5
+    target_coverage=0.9,      # or stop at 90% coverage
+)
+```
+
+### Compare algorithms
+
+```python
+from corpusgen.select import GreedySelector, CELFSelector, ILPSelector
+
+# Pre-phonemized for fair comparison (same G2P for all)
+result_greedy = corpusgen.select_sentences(
+    candidates, language="en-us", algorithm="greedy"
+)
+result_celf = corpusgen.select_sentences(
+    candidates, language="en-us", algorithm="celf"
+)
+result_ilp = corpusgen.select_sentences(
+    candidates, language="en-us", algorithm="ilp"
+)
+
+for r in [result_greedy, result_celf, result_ilp]:
+    print(f"{r.algorithm:12s} | {r.num_selected} sentences | "
+          f"{r.coverage:.1%} | {r.elapsed_seconds:.3f}s")
+```
+
+### Weighted selection (prioritize rare phonemes)
+
+```python
+import corpusgen
+from corpusgen.weights import frequency_inverse_weights
+from corpusgen.g2p.manager import G2PManager
+
+# Phonemize candidates
+g2p = G2PManager()
+results = g2p.phonemize_batch(candidates, language="en-us")
+candidate_phonemes = [r.phonemes for r in results]
+
+# Build inverse-frequency weights (rare phonemes get higher weight)
+all_phonemes = set()
+for p in candidate_phonemes:
+    all_phonemes.update(p)
+weights = frequency_inverse_weights(all_phonemes, candidate_phonemes)
+
+result = corpusgen.select_sentences(
+    candidates,
+    target_phonemes=sorted(all_phonemes),
+    candidate_phonemes=candidate_phonemes,
+    algorithm="greedy",
+    weights=weights,
+)
+```
+
 ### Export reports
 
 ```python
@@ -241,9 +332,17 @@ corpusgen/
 │   └── mapping.py        # EspeakMapping — espeak ↔ ISO 639-3
 ├── data/
 │   └── espeak_iso_mapping.json  # Bundled voice code mapping
-├── generate/             # (Phase 3-5: repository, LLM, local)
-├── select/               # (Phase 3: greedy/CELF selection)
-└── weights/              # (Phase 3: phoneme weighting)
+├── select/
+│   ├── base.py           # SelectorBase ABC
+│   ├── result.py         # SelectionResult
+│   ├── greedy.py         # GreedySelector
+│   ├── celf.py           # CELFSelector
+│   ├── stochastic.py     # StochasticGreedySelector
+│   ├── ilp.py            # ILPSelector (optional: pulp)
+│   ├── distribution.py   # DistributionAwareSelector
+│   └── nsga2.py          # NSGA2Selector (optional: pymoo)
+├── weights/              # Phoneme weighting strategies
+├── generate/             # (Phase 4-5: repository, LLM, local)
 ```
 
 ## Language Support
