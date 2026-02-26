@@ -5,9 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] — 2026-02-26
 
 ### Added
+
+#### Phase 5 — Generation Module
+- **Phon-CTG orchestration framework:**
+  - `PhoneticTargetInventory`: dynamic target tracking with weighted priorities, standalone or wrap-existing-tracker modes
+  - `PhoneticScorer`: composite scoring (coverage + phonotactic + fluency), peek and commit modes, batch scoring and ranking
+  - `PhonotacticConstraint` ABC + `NgramPhonotacticModel`: add-k smoothed n-gram, fit from phonemes or raw text, serializable
+  - `GenerationLoop`: iterative orchestration with `GenerationBackend` ABC, `StoppingCriteria` (target_coverage, max_sentences, max_iterations, timeout), `GenerationResult`, and progress callbacks
+- **Three pluggable generation backends:**
+  - `RepositoryBackend`: sentence pool selection, supports pre-phonemized, raw text + G2P, and HuggingFace datasets via `from_huggingface()`, with `mark_used()` deduplication
+  - `LLMBackend`: multi-provider via litellm (BYO API key), configurable prompt templates, retry logic, rate limiting, automatic G2P of outputs
+  - `LocalBackend`: HuggingFace transformers with lazy model loading, CUDA auto-detect, 4-bit/8-bit quantization via bitsandbytes, `guidance_strategy` hook
+- **GuidanceStrategy ABC:** `prepare()` + `modify_logits()` interface for inference-time logit modification
+- **Phon-DATG (logit steering):**
+  - `AttributeWordIndex`: phonemizes entire vocabulary, builds bidirectional unit↔token ID index, supports attribute/anti-attribute token sets with "covered" and "frequency" modes
+  - `LogitModulator`: stateless additive boost/penalty on logit tensors
+  - `DATGStrategy(GuidanceStrategy)`: orchestrates lazy index build, dynamic attribute set computation, delegates to LogitModulator
+- **Phon-RL (reinforcement learning with phonetic reward):**
+  - `PhoneticReward`: composite reward function (coverage + phonotactic + fluency), sentence-level and token-level (hierarchical) modes, KL reference model support, normalized coverage
+  - `PhonRLTrainer`: custom PPO implementation (Schulman et al., 2017) — no trl dependency. Includes `compute_gae`, `ppo_clip_loss`, `compute_kl_penalty`, `compute_log_probs_from_logits`. Supports static and dynamic prompt modes, step callbacks, PEFT/LoRA integration
+  - `PhonRLStrategy(GuidanceStrategy)`: identity pass-through wrapper for fine-tuned models, optional PEFT adapter loading
+  - `ValueHead`: lightweight nn.Module for PPO advantage estimation via GAE
+  - `TrainingConfig`: full PPO hyperparameter configuration with validation
+  - GPU auto-detection via `_detect_device()` with CUDA logging
 
 #### Phase 1 — G2P Pipeline
 - `G2PResult` dataclass: phonemes, diphones, triphones, unique_phonemes
@@ -46,6 +69,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 38 tests for `EspeakMapping`
 - 209 integration tests with real PHOIBLE data across 32 languages
 - 31 wiring tests for convenience API
+
+#### Phase 5 — Generation Module Tests
+- ~100 tests for Phon-RL: reward (45), policy (25), value_head (22), trainer PPO math + wiring + slow integration
+- Tests for Phon-CTG: targets, scorer, constraints, loop
+- Tests for Phon-DATG: attribute_words, modulator, graph
+- Tests for backends: repository, llm_api, local
+- `@pytest.mark.slow` infrastructure: slow tests skipped by default, required before publication
 
 #### Phase 3 — Selection Algorithms
 - `SelectorBase` ABC: common interface for all selection algorithms with `_extract_units()`, `_extract_unit_list()`, `_weighted_gain()` shared helpers

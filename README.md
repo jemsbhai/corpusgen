@@ -4,7 +4,7 @@
 
 `corpusgen` helps you build phonetically-balanced text corpora for speech synthesis (TTS), speech recognition (ASR), and clinical speech assessment — in any language.
 
-## What's Working Now (v0.1.0-alpha)
+## Features
 
 - **Evaluate** any text corpus for phoneme, diphone, or triphone coverage
 - **PHOIBLE integration** — phoneme inventories for 2,186 languages (3,020 inventories)
@@ -22,11 +22,15 @@
   - **NSGA-II** — multi-objective Pareto optimization (coverage × cost × distribution)
 - **Phoneme weighting** — uniform, frequency-inverse, and linguistic class strategies
 
+- **Phon-CTG generation framework** — orchestrated corpus generation with pluggable backends:
+  - **Repository backend** — select from sentence pools (pre-phonemized, raw text, or HuggingFace datasets)
+  - **LLM API backend** — generate targeted sentences via OpenAI/Anthropic/Ollama (BYO API key)
+  - **Local model backend** — HuggingFace transformers with CUDA auto-detect and 4-bit/8-bit quantization
+- **Phon-DATG** — inference-time logit steering for phonetically-targeted local generation
+- **Phon-RL** — PPO-based policy fine-tuning with composite phonetic reward (custom implementation, no trl dependency)
+
 ### Coming Soon
 
-- 📚 **Repository-based generation** — curated sentence banks on HuggingFace Hub
-- 🤖 **LLM API generation** — targeted sentences via OpenAI/Anthropic/Ollama
-- 🧠 **Phon-CTG** — fine-tuned local model for phoneme-targeted generation (the core research contribution)
 - **CLI** — command-line interface for all operations
 
 ## Prerequisites
@@ -94,7 +98,13 @@ This only needs to be done once.
 
 ## Installation
 
-### Development setup (current)
+### From PyPI
+
+```bash
+pip install corpusgen
+```
+
+### Development setup
 
 ```bash
 git clone https://github.com/jemsbhai/corpusgen.git
@@ -122,12 +132,6 @@ python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {tor
 
 > **Note:** Check [pytorch.org/get-started](https://pytorch.org/get-started/locally/) for the correct CUDA version matching your driver. Common options: `cu118`, `cu121`, `cu124`.
 
-### PyPI (coming soon)
-
-```bash
-pip install corpusgen
-```
-
 ## Quick Start
 
 ### Evaluate a corpus for phoneme coverage
@@ -135,7 +139,6 @@ pip install corpusgen
 ```python
 import corpusgen
 
-# Evaluate against the PHOIBLE inventory for English
 report = corpusgen.evaluate(
     ["The quick brown fox jumps over the lazy dog.",
      "She sells seashells by the seashore.",
@@ -145,26 +148,134 @@ report = corpusgen.evaluate(
 )
 
 print(report.render())
-# Coverage: 65.0% (26/40 phonemes)
-# Missing: ʒ, ð, θ, ...
-
 print(report.coverage)           # 0.65
 print(report.missing_phonemes)   # {'ʒ', 'ð', 'θ', ...}
-print(report.covered_phonemes)   # {'p', 'b', 't', 'd', ...}
 ```
 
-### Discover what phonemes are in your corpus
+### Select optimal sentences from a candidate pool
 
 ```python
 import corpusgen
 
-# No target = derive inventory from the text itself
-report = corpusgen.evaluate(
-    ["Hello world."],
+candidates = [
+    "The quick brown fox jumps over the lazy dog.",
+    "She sells seashells by the seashore.",
+    "Peter Piper picked a peck of pickled peppers.",
+    "How much wood would a woodchuck chuck?",
+    "To be or not to be, that is the question.",
+]
+
+result = corpusgen.select_sentences(
+    candidates,
+    language="en-us",
+    algorithm="greedy",  # or "celf", "stochastic", "ilp", "distribution", "nsga2"
+)
+
+print(f"Selected {result.num_selected} of {len(candidates)} sentences")
+print(f"Coverage: {result.coverage:.1%}")
+```
+
+### Generate a corpus from a sentence pool (Phon-CTG + Repository)
+
+```python
+from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
+from corpusgen.generate.phon_ctg.scorer import PhoneticScorer
+from corpusgen.generate.phon_ctg.loop import GenerationLoop, StoppingCriteria
+from corpusgen.generate.backends.repository import RepositoryBackend
+from corpusgen.g2p.manager import G2PManager
+
+# 1. Phonemize a sentence pool
+g2p = G2PManager()
+sentences = ["The cat sat on the mat.", "Big dogs bark loudly.", ...]
+results = g2p.phonemize_batch(sentences, language="en-us")
+pool = [
+    {"text": s, "phonemes": r.phonemes}
+    for s, r in zip(sentences, results) if r.phonemes
+]
+
+# 2. Set up targets, scorer, and backend
+targets = PhoneticTargetInventory(
+    target_phonemes=["p", "b", "t", "d", "k", "g"],
+    unit="phoneme",
+)
+scorer = PhoneticScorer(targets=targets, coverage_weight=1.0)
+backend = RepositoryBackend(pool=pool)
+
+# 3. Run the generation loop
+loop = GenerationLoop(
+    backend=backend,
+    targets=targets,
+    scorer=scorer,
+    stopping_criteria=StoppingCriteria(
+        target_coverage=0.9,
+        max_sentences=20,
+    ),
+)
+result = loop.run()
+
+print(f"Generated {result.num_generated} sentences, coverage: {result.coverage:.1%}")
+```
+
+### Generate with an LLM API (Phon-CTG + LLM)
+
+```python
+from corpusgen.generate.backends.llm_api import LLMBackend
+
+# Requires: poetry install --with llm
+# Set your API key: export OPENAI_API_KEY=...
+backend = LLMBackend(
+    model="gpt-4o-mini",
     language="en-us",
 )
-print(report.target_phonemes)    # all phonemes found in the text
-print(report.coverage)           # 1.0 (100% by definition)
+
+# Use with the same GenerationLoop as above
+loop = GenerationLoop(
+    backend=backend,
+    targets=targets,
+    scorer=scorer,
+    stopping_criteria=StoppingCriteria(target_coverage=0.9),
+)
+result = loop.run()
+```
+
+### Fine-tune a model with phonetic reward (Phon-RL)
+
+```python
+from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
+from corpusgen.generate.phon_rl.reward import PhoneticReward
+from corpusgen.generate.phon_rl.trainer import PhonRLTrainer, TrainingConfig
+
+# Requires: poetry install --with local
+
+# 1. Define targets and reward
+targets = PhoneticTargetInventory(
+    target_phonemes=["p", "b", "t", "d", "k"],
+    unit="phoneme",
+)
+reward = PhoneticReward(targets=targets, coverage_weight=1.0)
+
+# 2. Configure PPO training
+config = TrainingConfig(
+    model_name="gpt2",
+    num_steps=100,
+    learning_rate=1e-5,
+    kl_coeff=0.1,
+    use_peft=True,     # LoRA for parameter-efficient training
+    peft_r=8,
+    peft_alpha=16,
+    device=None,        # auto-detect GPU
+)
+
+# 3. Train with dynamic prompts that adapt to coverage gaps
+def make_prompt(targets):
+    missing = targets.next_targets(5)
+    return f"Write a sentence using these sounds: {', '.join(missing)}"
+
+trainer = PhonRLTrainer(reward=reward, config=config)
+result = trainer.train(prompt_fn=make_prompt)
+
+print(f"Final coverage: {result.final_coverage:.1%}")
+trainer.save_checkpoint("./phon_rl_checkpoint")
 ```
 
 ### Use PHOIBLE inventories directly
@@ -172,28 +283,14 @@ print(report.coverage)           # 1.0 (100% by definition)
 ```python
 from corpusgen import get_inventory
 
-# Get the PHOIBLE inventory via espeak code
 inv = get_inventory("en-us")
 print(inv.language_name)          # 'English'
 print(inv.consonants)             # ['p', 'b', 't', 'd', 'k', ...]
 print(inv.vowels)                 # ['iː', 'ɪ', 'ɛ', 'æ', ...]
-print(inv.has_tones)              # False
-print(inv.consonant_count)        # 27
-print(inv.vowel_count)            # 13
 
 # Query by distinctive features
 nasals = inv.segments_with_feature("nasal", "+")
 print([s.phoneme for s in nasals])  # ['m', 'n', 'ŋ']
-
-# Get all inventories for a language (different sources/dialects)
-from corpusgen.inventory import PhoibleDataset
-ds = PhoibleDataset()
-all_eng = ds.get_all_inventories("eng")
-print(f"English has {len(all_eng)} inventories in PHOIBLE")
-
-# Union inventory (maximally inclusive)
-union = ds.get_union_inventory("eng")
-print(f"Union: {union.size} segments from all sources")
 ```
 
 ### Evaluate with diphone or triphone coverage
@@ -208,102 +305,6 @@ report = corpusgen.evaluate(
     unit="diphone",
 )
 print(f"Diphone coverage: {report.coverage:.1%}")
-```
-
-### Work with multiple languages
-
-```python
-import corpusgen
-
-for lang in ["en-us", "fr-fr", "de", "ar", "hi", "ja", "cmn"]:
-    report = corpusgen.evaluate(
-        ["Hello world."],  # espeak handles transliteration
-        language=lang,
-    )
-    print(f"{lang}: {len(report.target_phonemes)} unique phonemes")
-```
-
-### Select optimal sentences from a candidate pool
-
-```python
-import corpusgen
-
-candidates = [
-    "The quick brown fox jumps over the lazy dog.",
-    "She sells seashells by the seashore.",
-    "Peter Piper picked a peck of pickled peppers.",
-    "How much wood would a woodchuck chuck?",
-    "To be or not to be, that is the question.",
-    # ... hundreds or thousands of candidates
-]
-
-# Greedy selection for maximal phoneme coverage
-result = corpusgen.select_sentences(
-    candidates,
-    language="en-us",
-    algorithm="greedy",  # or "celf", "stochastic", "ilp", "distribution", "nsga2"
-)
-
-print(f"Selected {result.num_selected} of {len(candidates)} sentences")
-print(f"Coverage: {result.coverage:.1%}")
-print(f"Missing: {result.missing_units}")
-
-# Use budget constraints
-result = corpusgen.select_sentences(
-    candidates,
-    language="en-us",
-    algorithm="greedy",
-    max_sentences=5,          # select at most 5
-    target_coverage=0.9,      # or stop at 90% coverage
-)
-```
-
-### Compare algorithms
-
-```python
-from corpusgen.select import GreedySelector, CELFSelector, ILPSelector
-
-# Pre-phonemized for fair comparison (same G2P for all)
-result_greedy = corpusgen.select_sentences(
-    candidates, language="en-us", algorithm="greedy"
-)
-result_celf = corpusgen.select_sentences(
-    candidates, language="en-us", algorithm="celf"
-)
-result_ilp = corpusgen.select_sentences(
-    candidates, language="en-us", algorithm="ilp"
-)
-
-for r in [result_greedy, result_celf, result_ilp]:
-    print(f"{r.algorithm:12s} | {r.num_selected} sentences | "
-          f"{r.coverage:.1%} | {r.elapsed_seconds:.3f}s")
-```
-
-### Weighted selection (prioritize rare phonemes)
-
-```python
-import corpusgen
-from corpusgen.weights import frequency_inverse_weights
-from corpusgen.g2p.manager import G2PManager
-
-# Phonemize candidates
-g2p = G2PManager()
-results = g2p.phonemize_batch(candidates, language="en-us")
-candidate_phonemes = [r.phonemes for r in results]
-
-# Build inverse-frequency weights (rare phonemes get higher weight)
-all_phonemes = set()
-for p in candidate_phonemes:
-    all_phonemes.update(p)
-weights = frequency_inverse_weights(all_phonemes, candidate_phonemes)
-
-result = corpusgen.select_sentences(
-    candidates,
-    target_phonemes=sorted(all_phonemes),
-    candidate_phonemes=candidate_phonemes,
-    algorithm="greedy",
-    weights=weights,
-)
 ```
 
 ### Export reports
@@ -323,14 +324,11 @@ print(report.to_json(indent=2))
 # JSON-LD (linked data)
 doc = report.to_jsonld_ex()
 
-# Python dict
-d = report.to_dict()
-
 # Human-readable at different verbosity levels
 from corpusgen.evaluate.report import Verbosity
-print(report.render(verbosity=Verbosity.MINIMAL))   # coverage + missing
-print(report.render(verbosity=Verbosity.NORMAL))     # + per-phoneme counts
-print(report.render(verbosity=Verbosity.VERBOSE))    # + per-sentence breakdown
+print(report.render(verbosity=Verbosity.MINIMAL))
+print(report.render(verbosity=Verbosity.NORMAL))
+print(report.render(verbosity=Verbosity.VERBOSE))
 ```
 
 ## Architecture
@@ -343,25 +341,40 @@ corpusgen/
 ├── coverage/
 │   └── tracker.py        # CoverageTracker — phoneme/diphone/triphone tracking
 ├── evaluate/
-│   ├── evaluate.py       # evaluate() — top-level user-facing API
-│   └── report.py         # EvaluationReport, SentenceDetail, Verbosity
+│   ├── evaluate.py       # evaluate() — top-level API
+│   └── report.py         # EvaluationReport, Verbosity
 ├── inventory/
 │   ├── models.py         # Segment (38 features), Inventory
-│   ├── phoible.py        # PhoibleDataset — PHOIBLE CSV loader/cache/query
+│   ├── phoible.py        # PhoibleDataset — PHOIBLE loader/cache/query
 │   └── mapping.py        # EspeakMapping — espeak ↔ ISO 639-3
-├── data/
-│   └── espeak_iso_mapping.json  # Bundled voice code mapping
 ├── select/
-│   ├── base.py           # SelectorBase ABC
-│   ├── result.py         # SelectionResult
 │   ├── greedy.py         # GreedySelector
-│   ├── celf.py           # CELFSelector
+│   ├── celf.py           # CELFSelector (lazy evaluation)
 │   ├── stochastic.py     # StochasticGreedySelector
-│   ├── ilp.py            # ILPSelector (optional: pulp)
-│   ├── distribution.py   # DistributionAwareSelector
-│   └── nsga2.py          # NSGA2Selector (optional: pymoo)
+│   ├── ilp.py            # ILPSelector (exact, optional: pulp)
+│   ├── distribution.py   # DistributionAwareSelector (KL-divergence)
+│   └── nsga2.py          # NSGA2Selector (Pareto, optional: pymoo)
 ├── weights/              # Phoneme weighting strategies
-├── generate/             # (Phase 4-5: repository, LLM, local)
+├── generate/
+│   ├── phon_ctg/         # Orchestration framework
+│   │   ├── targets.py    # PhoneticTargetInventory
+│   │   ├── scorer.py     # PhoneticScorer (coverage + phonotactic + fluency)
+│   │   ├── constraints.py # PhonotacticConstraint ABC + N-gram model
+│   │   └── loop.py       # GenerationLoop + StoppingCriteria
+│   ├── phon_rl/          # RL-based guidance (PPO)
+│   │   ├── reward.py     # PhoneticReward (composite, hierarchical)
+│   │   ├── trainer.py    # PhonRLTrainer (custom PPO, no trl)
+│   │   ├── policy.py     # PhonRLStrategy (GuidanceStrategy wrapper)
+│   │   └── value_head.py # ValueHead (nn.Module for GAE)
+│   ├── phon_datg/        # Inference-time logit steering
+│   │   ├── attribute_words.py  # Vocabulary phonemization + index
+│   │   ├── modulator.py  # Additive logit modulation
+│   │   └── graph.py      # DATGStrategy (GuidanceStrategy)
+│   ├── guidance.py       # GuidanceStrategy ABC
+│   └── backends/         # Pluggable generation engines
+│       ├── repository.py # Sentence pool selection
+│       ├── llm_api.py    # Multi-provider LLM API (litellm)
+│       └── local.py      # HuggingFace transformers + quantization
 ```
 
 ## Language Support
