@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "corpusgen"
-version = "0.1.1"
+version = "0.1.3"
 description = "Language-agnostic framework for generating and evaluating speech corpora with maximal phoneme coverage"
 authors = ["Muntaser Syed"]
 license = "Apache-2.0"

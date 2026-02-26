@@ -7,7 +7,7 @@ def test_version_exists():
     """Package should expose a version string."""
     assert hasattr(corpusgen, "__version__")
     assert isinstance(corpusgen.__version__, str)
-    assert corpusgen.__version__ == "0.1.0"
+    assert corpusgen.__version__ == "0.1.3"
 
 
 def test_subpackages_importable():
