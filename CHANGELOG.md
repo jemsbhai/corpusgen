@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] — 2026-02-26
+
+### Added
+
+#### CLI: `corpusgen generate`
+- Full command-line interface for corpus generation with three backends:
+  - `--backend repository` (sentence pool with `--file` or `--dataset`)
+  - `--backend llm_api` (LLM via litellm with `--model` and `--api-key`)
+  - `--backend local` (HuggingFace transformers with `--device`, `--quantization`)
+- Target inventory configuration: PHOIBLE-based with `--phonemes` for additive IPA symbols
+- Coverage unit selection: `--unit phoneme|diphone|triphone`
+- Priority weights: `--weights` (inline `p:2.0,b:1.5` or JSON file)
+- Stopping criteria: `--target-coverage`, `--max-sentences`, `--max-iterations`, `--timeout`
+- Output: `--format text|json`, `--output` file, `--candidates` per iteration
+
+#### Built-in Scorers
+- **NgramPhonotacticScorer** (`corpusgen.generate.scorers.phonotactic`):
+  - Inventory-derived mode (PHOIBLE baseline with Laplace smoothing)
+  - Corpus-trained mode via `from_corpus()` with G2P batch conversion
+  - Configurable n-gram order (bigram/trigram)
+  - `save()`/`load()` for JSON serialization and reproducibility
+- **PerplexityFluencyScorer** (`corpusgen.generate.scorers.fluency`):
+  - Lazy-loading causal LM (default: gpt2)
+  - `from_model()` constructor for sharing model with LocalBackend (VRAM efficiency)
+  - Normalized [0, 1] scores via `1 / (1 + log(perplexity))`
+- CLI flags for multi-objective scoring:
+  - `--coverage-weight`, `--phonotactic-weight`, `--phonotactic-scorer ngram`
+  - `--phonotactic-corpus`, `--phonotactic-n`
+  - `--fluency-weight`, `--fluency-scorer perplexity`, `--fluency-model`, `--fluency-device`
+
+#### Guidance Strategies (CLI)
+- `--guidance datg` with flat flags: `--datg-boost`, `--datg-penalty`, `--datg-anti-mode`, `--datg-freq-threshold`, `--datg-batch-size`
+- `--guidance rl` with `--rl-adapter-path`
+- `--guidance-config` JSON file (overrides flat flags)
+
+#### HuggingFace Dataset Support
+- `--dataset` for repository backend (e.g., `--dataset wikitext`)
+- Options: `--text-column`, `--split`, `--max-samples`
+- Mutually exclusive with `--file`
+
+#### Custom Prompt Templates
+- `--prompt-template` (inline string or file path) for llm_api and local backends
+- Required `{target_units}` placeholder with validation
+
+#### Model Sharing
+- When fluency scorer model matches local backend model, model is shared via `from_model()` to avoid loading twice (saves VRAM)
+- Backend built before scorer to enable early loading via `_ensure_loaded()`
+
+#### Testing
+- 11 slow integration tests for CLI (generate, inventory, evaluate) using real espeak-ng + PHOIBLE
+- 27 fast unit tests for phonotactic scorer (including 5 persistence tests)
+- 14 fast unit tests for fluency scorer (12 fast + 2 slow)
+- 20 fast CLI tests for scorer, guidance, dataset, template, and model-sharing flags
+
+---
+
 ## [0.1.0] — 2026-02-26
 
 ### Added

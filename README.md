@@ -28,7 +28,8 @@
   - **Local model backend** — HuggingFace transformers with CUDA auto-detect and 4-bit/8-bit quantization
 - **Phon-DATG** — inference-time logit steering for phonetically-targeted local generation
 - **Phon-RL** — PPO-based policy fine-tuning with composite phonetic reward (custom implementation, no trl dependency)
-- **CLI** — `corpusgen evaluate`, `corpusgen select`, `corpusgen inventory` from the command line
+- **Built-in scorers** — n-gram phonotactic naturalness + LM perplexity fluency scoring
+- **CLI** — `corpusgen evaluate`, `corpusgen select`, `corpusgen inventory`, `corpusgen generate` from the command line
 
 ## Prerequisites
 
@@ -172,7 +173,20 @@ print(f"Selected {result.num_selected} of {len(candidates)} sentences")
 print(f"Coverage: {result.coverage:.1%}")
 ```
 
-### Generate a corpus from a sentence pool (Phon-CTG + Repository)
+### Generate a corpus from a sentence pool
+
+The fastest way is the CLI:
+
+```bash
+# Select best sentences from a pool for maximal phoneme coverage
+corpusgen generate -b repository -l en-us --file pool.txt --max-sentences 50
+
+# With multi-objective scoring (coverage + phonotactic naturalness)
+corpusgen generate -b repository -l en-us --file pool.txt \
+  --coverage-weight 0.7 --phonotactic-weight 0.3 --phonotactic-scorer ngram
+```
+
+Or use the Python API for full control:
 
 ```python
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
@@ -213,7 +227,16 @@ result = loop.run()
 print(f"Generated {result.num_generated} sentences, coverage: {result.coverage:.1%}")
 ```
 
-### Generate with an LLM API (Phon-CTG + LLM)
+### Generate with an LLM API
+
+Via CLI:
+
+```bash
+# Requires: poetry install --with llm
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --max-sentences 20
+```
+
+Or Python API:
 
 ```python
 from corpusgen.generate.backends.llm_api import LLMBackend
@@ -347,6 +370,46 @@ corpusgen select --file candidates.txt --language en-us
 corpusgen select -f pool.txt -l en-us --algorithm celf --max-sentences 50
 corpusgen select -f pool.txt -l en-us --target phoible --target-coverage 0.95
 corpusgen select -f pool.txt -l en-us --output selected.txt --format json
+
+# Generate sentences targeting phoneme coverage
+# --- Repository backend (sentence pool) ---
+corpusgen generate -b repository -l en-us --file pool.txt --max-sentences 50
+corpusgen generate -b repository -l en-us --file pool.txt --unit diphone --format json
+corpusgen generate -b repository -l en-us --file pool.txt --phonemes "ʃ,ʒ,θ" --weights "ʃ:2.0,θ:1.5"
+corpusgen generate -b repository -l en-us --file pool.txt --output generated.txt
+
+# --- Repository backend with HuggingFace dataset ---
+corpusgen generate -b repository -l en-us --dataset wikitext --split train --max-samples 1000
+
+# --- LLM API backend (requires API key) ---
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --max-sentences 20
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --api-key sk-... --llm-temperature 0.9
+
+# --- Local model backend (requires torch) ---
+corpusgen generate -b local -l en-us --model gpt2 --device cuda --max-sentences 30
+corpusgen generate -b local -l en-us --model gpt2 --quantization 4bit --local-temperature 0.7
+
+# --- With built-in scorers (multi-objective candidate ranking) ---
+corpusgen generate -b repository -l en-us --file pool.txt \
+  --coverage-weight 0.6 \
+  --phonotactic-weight 0.3 --phonotactic-scorer ngram \
+  --fluency-weight 0.1 --fluency-scorer perplexity --fluency-model gpt2
+
+# --- With corpus-trained phonotactic model ---
+corpusgen generate -b repository -l en-us --file pool.txt \
+  --phonotactic-weight 0.3 --phonotactic-scorer ngram \
+  --phonotactic-corpus reference.txt --phonotactic-n 3
+
+# --- With guidance strategies (local backend only) ---
+corpusgen generate -b local -l en-us --model gpt2 --guidance datg --datg-boost 5.0
+corpusgen generate -b local -l en-us --model gpt2 --guidance rl --rl-adapter-path ./checkpoint
+corpusgen generate -b local -l en-us --model gpt2 --guidance datg --guidance-config datg.json
+
+# --- Custom prompt templates ---
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini \
+  --prompt-template "Write {k} English sentences containing: {target_units}"
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini \
+  --prompt-template prompt.txt
 ```
 
 ## Architecture
@@ -355,6 +418,7 @@ corpusgen select -f pool.txt -l en-us --output selected.txt --format json
 corpusgen/
 ├── cli/                  # Command-line interface
 │   ├── evaluate.py       # corpusgen evaluate
+│   ├── generate.py       # corpusgen generate
 │   ├── inventory.py      # corpusgen inventory
 │   └── select.py         # corpusgen select
 ├── g2p/                  # Grapheme-to-phoneme conversion
@@ -383,6 +447,9 @@ corpusgen/
 │   │   ├── scorer.py     # PhoneticScorer (coverage + phonotactic + fluency)
 │   │   ├── constraints.py # PhonotacticConstraint ABC + N-gram model
 │   │   └── loop.py       # GenerationLoop + StoppingCriteria
+│   ├── scorers/          # Built-in scoring functions
+│   │   ├── phonotactic.py # NgramPhonotacticScorer (save/load, corpus-trained)
+│   │   └── fluency.py    # PerplexityFluencyScorer (lazy LM, model sharing)
 │   ├── phon_rl/          # RL-based guidance (PPO)
 │   │   ├── reward.py     # PhoneticReward (composite, hierarchical)
 │   │   ├── trainer.py    # PhonRLTrainer (custom PPO, no trl)
@@ -394,7 +461,7 @@ corpusgen/
 │   │   └── graph.py      # DATGStrategy (GuidanceStrategy)
 │   ├── guidance.py       # GuidanceStrategy ABC
 │   └── backends/         # Pluggable generation engines
-│       ├── repository.py # Sentence pool selection
+│       ├── repository.py # Sentence pool selection + HuggingFace datasets
 │       ├── llm_api.py    # Multi-provider LLM API (litellm)
 │       └── local.py      # HuggingFace transformers + quantization
 ```
