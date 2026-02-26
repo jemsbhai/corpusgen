@@ -1,6 +1,6 @@
 """corpusgen: Language-agnostic speech corpus generation with maximal phoneme coverage."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from corpusgen.evaluate import evaluate
 from corpusgen.inventory.models import Inventory

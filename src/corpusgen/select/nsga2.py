@@ -22,6 +22,11 @@ try:
 except ImportError:
     NSGA2 = None  # type: ignore[assignment, misc]
 
+    class Problem:  # type: ignore[no-redef]
+        """Stub when pymoo is not installed."""
+
+        pass
+
 
 class _CoverageSelectionProblem(Problem):
     """pymoo Problem: binary selection with multiple objectives.
