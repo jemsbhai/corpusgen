@@ -110,7 +110,10 @@ build-backend = "poetry.core.masonry.api"
 # --- Tool configs ---
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -m 'not slow'"
+markers = [
+    "slow: marks tests that require real models / GPU / long runtime (deselected by default, run with: -m slow)",
+]
 
 [tool.ruff]
 target-version = "py310"
