@@ -28,10 +28,7 @@
   - **Local model backend** — HuggingFace transformers with CUDA auto-detect and 4-bit/8-bit quantization
 - **Phon-DATG** — inference-time logit steering for phonetically-targeted local generation
 - **Phon-RL** — PPO-based policy fine-tuning with composite phonetic reward (custom implementation, no trl dependency)
-
-### Coming Soon
-
-- **CLI** — command-line interface for all operations
+- **CLI** — `corpusgen evaluate`, `corpusgen select`, `corpusgen inventory` from the command line
 
 ## Prerequisites
 
@@ -331,10 +328,35 @@ print(report.render(verbosity=Verbosity.NORMAL))
 print(report.render(verbosity=Verbosity.VERBOSE))
 ```
 
+## CLI Usage
+
+```bash
+# Show PHOIBLE phoneme inventory for a language
+corpusgen inventory --language en-us
+corpusgen inventory --language fr-fr --format json
+corpusgen inventory --language en-us --source upsid
+
+# Evaluate a corpus for phoneme coverage
+corpusgen evaluate "The cat sat on the mat." --language en-us
+corpusgen evaluate --file corpus.txt --language en-us --target phoible
+corpusgen evaluate --file corpus.txt -l en-us --unit diphone --format json
+corpusgen evaluate --file corpus.txt -l en-us --verbosity verbose
+
+# Select optimal sentences from a candidate pool
+corpusgen select --file candidates.txt --language en-us
+corpusgen select -f pool.txt -l en-us --algorithm celf --max-sentences 50
+corpusgen select -f pool.txt -l en-us --target phoible --target-coverage 0.95
+corpusgen select -f pool.txt -l en-us --output selected.txt --format json
+```
+
 ## Architecture
 
 ```
 corpusgen/
+├── cli/                  # Command-line interface
+│   ├── evaluate.py       # corpusgen evaluate
+│   ├── inventory.py      # corpusgen inventory
+│   └── select.py         # corpusgen select
 ├── g2p/                  # Grapheme-to-phoneme conversion
 │   ├── manager.py        # G2PManager — multi-backend G2P (espeak-ng)
 │   └── result.py         # G2PResult — phonemes, diphones, triphones

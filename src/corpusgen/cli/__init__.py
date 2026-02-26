@@ -2,6 +2,10 @@
 
 import click
 
+from corpusgen.cli.evaluate import evaluate_cmd
+from corpusgen.cli.inventory import inventory
+from corpusgen.cli.select import select_cmd
+
 
 @click.group()
 @click.version_option()
@@ -9,7 +13,6 @@ def main() -> None:
     """corpusgen: Generate and evaluate speech corpora with maximal phoneme coverage."""
 
 
-# Subcommands will be added in later phases:
-# - corpusgen evaluate <text_or_file> --language <lang>
-# - corpusgen generate --language <lang> --strategy <strategy>
-# - corpusgen inventory --language <lang>
+main.add_command(inventory)
+main.add_command(evaluate_cmd, name="evaluate")
+main.add_command(select_cmd, name="select")
