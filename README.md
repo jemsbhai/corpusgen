@@ -103,6 +103,25 @@ poetry install
 poetry run pytest
 ```
 
+### With local model support (GPU recommended)
+
+For Phon-RL training and Phon-DATG logit steering with local models:
+
+```bash
+# 1. Install corpusgen with local model dependencies
+poetry install --with local
+
+# 2. IMPORTANT: Replace CPU torch with CUDA torch for GPU acceleration.
+#    The default Poetry install pulls CPU-only torch from PyPI.
+#    For NVIDIA GPUs (CUDA 12.1):
+pip install torch --index-url https://download.pytorch.org/whl/cu121 --force-reinstall
+
+# Verify GPU is available:
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
+```
+
+> **Note:** Check [pytorch.org/get-started](https://pytorch.org/get-started/locally/) for the correct CUDA version matching your driver. Common options: `cu118`, `cu121`, `cu124`.
+
 ### PyPI (coming soon)
 
 ```bash

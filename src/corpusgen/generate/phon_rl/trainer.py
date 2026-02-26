@@ -100,6 +100,7 @@ class TrainingConfig:
     seed: int = 42
     max_new_tokens: int = 64
     temperature: float = 0.8
+    device: str | None = None  # None = auto-detect (CUDA if available, else CPU)
     use_peft: bool = False
     peft_r: int = 8
     peft_alpha: int = 16
@@ -276,15 +277,45 @@ def _set_seed(seed: int) -> None:
         pass
 
 
+def _detect_device(device: str | None) -> str:
+    """Auto-detect the best device if none specified."""
+    if device is not None:
+        return device
+    try:
+        import torch
+        if torch.cuda.is_available():
+            detected = "cuda"
+            logger.info(
+                "CUDA detected: %s (%s)",
+                torch.cuda.get_device_name(0),
+                f"{torch.cuda.get_device_properties(0).total_mem / 1e9:.1f}GB",
+            )
+        else:
+            detected = "cpu"
+            logger.info("CUDA not available, using CPU.")
+        return detected
+    except ImportError:
+        return "cpu"
+
+
 def _load_model_and_tokenizer(
     model_name: str,
+    device: str = "cpu",
     use_peft: bool = False,
     peft_r: int = 8,
     peft_alpha: int = 16,
 ) -> tuple[Any, Any]:
     """Load model and tokenizer for PPO training.
 
-    When use_peft is True, wraps the model with a LoRA adapter.
+    Places the model on the specified device. When use_peft is True,
+    wraps the model with a LoRA adapter.
+
+    Args:
+        model_name: HuggingFace model ID or local path.
+        device: Target device ("cuda", "cpu", or specific like "cuda:0").
+        use_peft: Whether to apply PEFT/LoRA.
+        peft_r: LoRA rank.
+        peft_alpha: LoRA alpha scaling.
 
     Returns:
         Tuple of (model, tokenizer).
@@ -295,7 +326,9 @@ def _load_model_and_tokenizer(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    logger.info("Loading model %s on device=%s", model_name, device)
     model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = model.to(device)
 
     if use_peft:
         from peft import LoraConfig, get_peft_model  # type: ignore[import-untyped]
@@ -400,9 +433,13 @@ class PhonRLTrainer:
         # --- Set seed ---
         _set_seed(self._config.seed)
 
+        # --- Detect device ---
+        device = _detect_device(self._config.device)
+
         # --- Load model and tokenizer ---
         self._model, self._tokenizer = _load_model_and_tokenizer(
             model_name=self._config.model_name,
+            device=device,
             use_peft=self._config.use_peft,
             peft_r=self._config.peft_r,
             peft_alpha=self._config.peft_alpha,

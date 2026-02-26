@@ -65,7 +65,6 @@ torch = ">=2.1"
 transformers = ">=4.38"
 bitsandbytes = ">=0.43"
 peft = ">=0.10"
-trl = ">=0.8"
 
 [tool.poetry.group.neural-g2p]
 optional = true
@@ -96,7 +95,6 @@ anthropic = ">=0.25"
 torch = ">=2.1"
 transformers = ">=4.38"
 peft = ">=0.10"
-trl = ">=0.8"
 scipy = ">=1.11"
 matplotlib = ">=3.8"
 pulp = ">=2.7"
