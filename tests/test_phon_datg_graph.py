@@ -52,6 +52,21 @@ def _mock_g2p_batch(texts: list[str], language: str = "en-us") -> list:
     return results
 
 
+class _FakeTensorView:
+    """View into a _FakeTensor for vectorized [:, list] operations."""
+
+    def __init__(self, tensor: "_FakeTensor", rows: list[int], cols: list[int]) -> None:
+        self._tensor = tensor
+        self._rows = rows
+        self._cols = cols
+
+    def __iadd__(self, scalar: float) -> "_FakeTensorView":
+        for r in self._rows:
+            for c in self._cols:
+                self._tensor.data[r][c] += scalar
+        return self
+
+
 class _FakeTensor:
     """Minimal tensor for testing without torch."""
 
@@ -65,13 +80,19 @@ class _FakeTensor:
     def __getitem__(self, key):
         if isinstance(key, tuple) and len(key) == 2:
             row, col = key
+            if isinstance(row, slice) and isinstance(col, list):
+                rows = list(range(*row.indices(self.shape[0])))
+                return _FakeTensorView(self, rows, col)
             return self.data[row][col]
         return self.data[key]
 
     def __setitem__(self, key, value):
         if isinstance(key, tuple) and len(key) == 2:
             row, col = key
-            self.data[row][col] = value
+            if isinstance(row, slice) and isinstance(col, list) and isinstance(value, _FakeTensorView):
+                pass  # already applied in-place via __iadd__
+            else:
+                self.data[row][col] = value
         else:
             self.data[key] = value
 
@@ -406,3 +427,193 @@ class TestEdgeCases:
         strategy.prepare(target_units=["ʒ"], model=model, tokenizer=tok)
 
         assert strategy.current_attribute_tokens == set()
+
+
+# ---------------------------------------------------------------------------
+# Diphone unit_level — anti-attribute filtering at diphone level
+# ---------------------------------------------------------------------------
+
+
+class TestDiphoneUnitLevel:
+    """DATGStrategy with unit='diphone' filters anti-attribute tokens by diphones only.
+
+    When targets use diphone coverage, a token is anti-attribute only if ALL
+    its diphone-level units are already covered. Phoneme and triphone units
+    are irrelevant to this determination.
+
+    This matters for papers: if we report diphone coverage and the steering
+    was filtering on the wrong unit level, results would be misleading.
+    """
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_anti_attribute_when_diphones_covered(self, mock_g2p):
+        """Token whose diphones are all covered → anti-attribute.
+
+        cat → [k, æ, t] → diphones: {k-æ, æ-t}
+        Cover k-æ and æ-t → cat is anti-attribute at diphone level.
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t", "s", "ʃ", "ɪ", "p"], unit="diphone"
+        )
+        vocab = {"cat": 0, "ship": 1}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Cover diphones k-æ and æ-t (sequential from [k, æ, t])
+        targets.tracker.update(["k", "æ", "t"], sentence_index=0)
+
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["ʃ-ɪ"], model=model, tokenizer=tok)
+
+        # cat's diphones (k-æ, æ-t) are both covered → anti-attribute
+        assert 0 in strategy.current_anti_attribute_tokens
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_not_anti_attribute_when_diphones_uncovered(self, mock_g2p):
+        """Token with uncovered diphones → NOT anti-attribute.
+
+        ship → [ʃ, ɪ, p] → diphones: {ʃ-ɪ, ɪ-p}
+        Only k-æ and æ-t covered → ship is NOT anti-attribute.
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t", "s", "ʃ", "ɪ", "p"], unit="diphone"
+        )
+        vocab = {"cat": 0, "ship": 1}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Only cover cat's diphones
+        targets.tracker.update(["k", "æ", "t"], sentence_index=0)
+
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["ʃ-ɪ"], model=model, tokenizer=tok)
+
+        # ship's diphones (ʃ-ɪ, ɪ-p) are uncovered → not anti-attribute
+        assert 1 not in strategy.current_anti_attribute_tokens
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_diphone_ignores_phoneme_coverage(self, mock_g2p):
+        """Covering individual phonemes does NOT make diphone-level anti-attribute.
+
+        Even if k, æ, t are all seen as phonemes, the diphones k-æ and æ-t
+        must be explicitly covered for a token to be anti-attribute in diphone
+        mode. This test ensures the unit_level filter is actually applied.
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t"], unit="diphone"
+        )
+        vocab = {"cat": 0}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Do NOT update tracker — no diphones covered
+        # (even though the _phonemes_ exist in the inventory)
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["k-t"], model=model, tokenizer=tok)
+
+        # cat should NOT be anti-attribute — no diphones covered yet
+        assert 0 not in strategy.current_anti_attribute_tokens
+
+
+# ---------------------------------------------------------------------------
+# Triphone unit_level — anti-attribute filtering at triphone level
+# ---------------------------------------------------------------------------
+
+
+class TestTriphoneUnitLevel:
+    """DATGStrategy with unit='triphone' filters anti-attribute by triphones only."""
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_anti_attribute_when_triphones_covered(self, mock_g2p):
+        """Token whose triphones are all covered → anti-attribute.
+
+        cat → [k, æ, t] → triphones: {k-æ-t}
+        Cover k-æ-t → cat is anti-attribute at triphone level.
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t", "ʃ", "ɪ", "p"], unit="triphone"
+        )
+        vocab = {"cat": 0, "ship": 1}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Cover triphone k-æ-t
+        targets.tracker.update(["k", "æ", "t"], sentence_index=0)
+
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["ʃ-ɪ-p"], model=model, tokenizer=tok)
+
+        # cat's triphone (k-æ-t) is covered → anti-attribute
+        assert 0 in strategy.current_anti_attribute_tokens
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_not_anti_attribute_when_triphones_uncovered(self, mock_g2p):
+        """Token with uncovered triphones → NOT anti-attribute."""
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t", "ʃ", "ɪ", "p"], unit="triphone"
+        )
+        vocab = {"cat": 0, "ship": 1}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Cover only cat's triphone, not ship's
+        targets.tracker.update(["k", "æ", "t"], sentence_index=0)
+
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["ʃ-ɪ-p"], model=model, tokenizer=tok)
+
+        # ship's triphone (ʃ-ɪ-p) is uncovered → not anti-attribute
+        assert 1 not in strategy.current_anti_attribute_tokens
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_triphone_ignores_diphone_coverage(self, mock_g2p):
+        """Covering diphones does NOT satisfy triphone-level filtering.
+
+        This ensures unit_level='triphone' truly filters to triphones only.
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["k", "æ", "t"], unit="triphone"
+        )
+        vocab = {"cat": 0}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # No triphones covered (tracker is fresh)
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["k-æ-t"], model=model, tokenizer=tok)
+
+        # cat should NOT be anti-attribute — no triphones covered
+        assert 0 not in strategy.current_anti_attribute_tokens
+
+    @patch("corpusgen.generate.phon_datg.attribute_words._phonemize_batch")
+    def test_short_token_no_triphones_not_anti_attribute(self, mock_g2p):
+        """Token with <3 phonemes has no triphones → never anti-attribute in triphone mode.
+
+        'the' → [ð, ə] → triphones: {} (empty)
+        _filter_by_level returns empty set, and empty filtered set means
+        the token is excluded (not anti-attribute).
+        """
+        mock_g2p.side_effect = _mock_g2p_batch
+        targets = _make_targets(
+            ["ð", "ə", "k", "æ", "t"], unit="triphone"
+        )
+        vocab = {"the": 0, "cat": 1}
+        tok = _mock_tokenizer(vocab)
+        model = MagicMock()
+
+        # Cover everything cat has
+        targets.tracker.update(["k", "æ", "t"], sentence_index=0)
+
+        strategy = DATGStrategy(targets=targets, anti_attribute_mode="covered")
+        strategy.prepare(target_units=["ð-ə-k"], model=model, tokenizer=tok)
+
+        # 'the' has no triphones → filtered set is empty → not anti-attribute
+        assert 0 not in strategy.current_anti_attribute_tokens
+        # 'cat' has triphone k-æ-t covered → anti-attribute
+        assert 1 in strategy.current_anti_attribute_tokens

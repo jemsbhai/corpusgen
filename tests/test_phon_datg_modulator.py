@@ -10,6 +10,21 @@ from corpusgen.generate.phon_datg.modulator import LogitModulator
 # ---------------------------------------------------------------------------
 
 
+class _FakeTensorView:
+    """View into a _FakeTensor for vectorized [:, list] operations."""
+
+    def __init__(self, tensor: "_FakeTensor", rows: list[int], cols: list[int]) -> None:
+        self._tensor = tensor
+        self._rows = rows
+        self._cols = cols
+
+    def __iadd__(self, scalar: float) -> "_FakeTensorView":
+        for r in self._rows:
+            for c in self._cols:
+                self._tensor.data[r][c] += scalar
+        return self
+
+
 class _FakeTensor:
     """Minimal tensor-like object for testing without torch."""
 
@@ -23,6 +38,9 @@ class _FakeTensor:
     def __getitem__(self, key):
         if isinstance(key, tuple) and len(key) == 2:
             row, col = key
+            if isinstance(row, slice) and isinstance(col, list):
+                rows = list(range(*row.indices(self.shape[0])))
+                return _FakeTensorView(self, rows, col)
             if isinstance(col, list):
                 return [self.data[row][c] for c in col]
             return self.data[row][col]
@@ -31,7 +49,9 @@ class _FakeTensor:
     def __setitem__(self, key, value):
         if isinstance(key, tuple) and len(key) == 2:
             row, col = key
-            if isinstance(col, list):
+            if isinstance(row, slice) and isinstance(col, list) and isinstance(value, _FakeTensorView):
+                pass  # already applied in-place via __iadd__
+            elif isinstance(col, list):
                 for c, v in zip(col, value if hasattr(value, "__iter__") else [value] * len(col)):
                     self.data[row][c] = v
             else:

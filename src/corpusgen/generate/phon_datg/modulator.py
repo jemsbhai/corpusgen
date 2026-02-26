@@ -93,11 +93,10 @@ class LogitModulator:
             tid for tid in anti_attribute_token_ids if 0 <= tid < vocab_size
         ]
 
-        # Apply adjustments across all batch entries
-        for b in range(modified.shape[0]):
-            for tid in valid_boost:
-                modified[b, tid] = modified[b, tid] + self._boost_strength
-            for tid in valid_penalty:
-                modified[b, tid] = modified[b, tid] + self._penalty_strength
+        # Vectorized: apply adjustments across all batch entries at once
+        if valid_boost:
+            modified[:, valid_boost] += self._boost_strength
+        if valid_penalty:
+            modified[:, valid_penalty] += self._penalty_strength
 
         return modified
