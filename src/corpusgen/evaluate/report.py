@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field, asdict
 from enum import Enum
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from corpusgen.evaluate.distribution import DistributionMetrics
 
 
 class Verbosity(Enum):
@@ -65,6 +68,7 @@ class EvaluationReport:
     total_sentences: int
     sentence_details: list[SentenceDetail] = field(default_factory=list)
     phoneme_sources: dict[str, list[int]] = field(default_factory=dict)
+    distribution: DistributionMetrics | None = None
 
     # --- Rendering ---
 
@@ -109,6 +113,24 @@ class EvaluationReport:
 
     def _render_normal(self) -> str:
         parts = [self._render_minimal(), ""]
+
+        # Distribution metrics
+        if self.distribution is not None:
+            dm = self.distribution
+            parts.append("Distribution quality:")
+            parts.append(f"  Entropy: {dm.entropy:.4f} bits")
+            parts.append(f"  Normalized entropy: {dm.normalized_entropy:.4f}")
+            parts.append(f"  JSD (vs uniform): {dm.jsd_uniform:.6f}")
+            parts.append(f"  Coefficient of variation: {dm.coefficient_of_variation:.4f}")
+            parts.append(f"  Count range: {dm.min_count}–{dm.max_count}")
+            parts.append(f"  Count ratio (min/max): {dm.count_ratio:.4f}")
+            parts.append(f"  Zero-count units: {dm.zero_count}")
+            parts.append(f"  PCD (uniform): {dm.pcd_uniform:.4f}")
+            if dm.jsd_reference is not None:
+                parts.append(f"  JSD (vs reference): {dm.jsd_reference:.6f}")
+            if dm.pearson_correlation is not None:
+                parts.append(f"  Pearson correlation: {dm.pearson_correlation:.6f}")
+            parts.append("")
 
         # Per-phoneme counts
         parts.append("Per-phoneme counts:")
@@ -168,6 +190,7 @@ class EvaluationReport:
                 for sd in self.sentence_details
             ],
             "phoneme_sources": dict(self.phoneme_sources),
+            "distribution": self.distribution.to_dict() if self.distribution is not None else None,
         }
 
     def to_json(self, indent: int | None = None) -> str:
@@ -202,6 +225,7 @@ class EvaluationReport:
                 "total_sentences": "corpusgen:totalSentences",
                 "sentence_details": "corpusgen:sentenceDetails",
                 "phoneme_sources": "corpusgen:phonemeSources",
+                "distribution": "corpusgen:distributionMetrics",
             },
             "@type": "corpusgen:EvaluationReport",
             **base,

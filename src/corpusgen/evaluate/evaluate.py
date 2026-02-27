@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from corpusgen.coverage.tracker import CoverageTracker
+from corpusgen.evaluate.distribution import compute_distribution_metrics
 from corpusgen.evaluate.report import EvaluationReport, SentenceDetail
 from corpusgen.g2p.manager import G2PManager
 from corpusgen.g2p.result import G2PResult
@@ -130,7 +131,13 @@ def evaluate(
             )
         )
 
-    # --- Step 4: Assemble report ---
+    # --- Step 4: Compute distribution metrics ---
+    distribution = compute_distribution_metrics(
+        phoneme_counts=tracker.phoneme_counts,
+        target_phonemes=target_units_list,
+    )
+
+    # --- Step 5: Assemble report ---
     return EvaluationReport(
         language=language,
         unit=unit,
@@ -142,4 +149,5 @@ def evaluate(
         total_sentences=len(sentences),
         sentence_details=sentence_details,
         phoneme_sources=tracker.phoneme_sources,
+        distribution=distribution,
     )
