@@ -486,3 +486,134 @@ class TestEdgeCases:
         result = simple_scorer.score(phonemes=["p", "b", "t"])
         assert result.coverage_gain == 0
         assert result.composite_score == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# Readability scorer integration
+# ---------------------------------------------------------------------------
+
+
+class TestReadabilityIntegration:
+    """Test readability_scorer as a 4th hook in PhoneticScorer."""
+
+    def test_default_readability_weight_is_zero(self, simple_inventory):
+        scorer = PhoneticScorer(targets=simple_inventory)
+        assert scorer.readability_weight == 0.0
+
+    def test_readability_weight_stored(self, simple_inventory):
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            readability_weight=0.15,
+        )
+        assert scorer.readability_weight == 0.15
+
+    def test_score_result_has_readability_field(self, simple_scorer):
+        """ScoreResult should include readability_score with default 0.0."""
+        result = simple_scorer.score(phonemes=["p", "b"])
+        assert hasattr(result, "readability_score")
+        assert result.readability_score == 0.0
+
+    def test_readability_hook_called_with_text(self, simple_inventory):
+        """readability_scorer receives the candidate text."""
+        received = {}
+
+        def read_fn(text):
+            received["text"] = text
+            return 0.75
+
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            readability_scorer=read_fn,
+            readability_weight=0.2,
+        )
+        scorer.score(text="hello world", phonemes=["p"])
+        assert received["text"] == "hello world"
+
+    def test_readability_hook_gets_none_when_no_text(self, simple_inventory):
+        """readability_scorer receives None when no text is provided."""
+        received = {}
+
+        def read_fn(text):
+            received["text"] = text
+            return 0.5
+
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            readability_scorer=read_fn,
+            readability_weight=0.1,
+        )
+        scorer.score(phonemes=["p"])
+        assert received["text"] is None
+
+    def test_readability_contributes_to_composite(self, simple_inventory):
+        """Readability score should be included in composite calculation."""
+        def read_fn(text):
+            return 0.8
+
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            readability_scorer=read_fn,
+            coverage_weight=0.5,
+            readability_weight=0.3,
+        )
+        result = scorer.score(text="test", phonemes=["p", "b"])
+        # composite = 0.5 * weighted_gain + 0.3 * 0.8
+        expected = (0.5 * result.weighted_coverage_gain) + (0.3 * 0.8)
+        assert result.composite_score == pytest.approx(expected)
+        assert result.readability_score == pytest.approx(0.8)
+
+    def test_all_four_hooks_combined(self, simple_inventory):
+        """All four scorer hooks contribute to composite correctly."""
+        def phono_fn(phonemes):
+            return 0.9
+
+        def fluency_fn(text):
+            return 0.7
+
+        def read_fn(text):
+            return 0.6
+
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            phonotactic_scorer=phono_fn,
+            fluency_scorer=fluency_fn,
+            readability_scorer=read_fn,
+            coverage_weight=0.4,
+            phonotactic_weight=0.3,
+            fluency_weight=0.2,
+            readability_weight=0.1,
+        )
+        result = scorer.score(text="test", phonemes=["p", "b"])
+        expected = (
+            0.4 * result.weighted_coverage_gain
+            + 0.3 * 0.9
+            + 0.2 * 0.7
+            + 0.1 * 0.6
+        )
+        assert result.composite_score == pytest.approx(expected)
+        assert result.phonotactic_score == pytest.approx(0.9)
+        assert result.fluency_score == pytest.approx(0.7)
+        assert result.readability_score == pytest.approx(0.6)
+
+    def test_no_readability_hook_contributes_zero(self, simple_inventory):
+        """Without a readability hook, readability_score is 0 regardless of weight."""
+        scorer = PhoneticScorer(
+            targets=simple_inventory,
+            readability_weight=0.5,  # weight set but no hook
+        )
+        result = scorer.score(phonemes=["p"])
+        assert result.readability_score == 0.0
+
+    def test_backward_compat_score_result_construction(self):
+        """ScoreResult can be constructed without readability_score (default 0.0)."""
+        result = ScoreResult(
+            text="hello",
+            phonemes=["h"],
+            coverage_gain=1,
+            weighted_coverage_gain=1.0,
+            phonotactic_score=0.5,
+            fluency_score=0.5,
+            composite_score=2.0,
+            new_units={"h"},
+        )
+        assert result.readability_score == 0.0

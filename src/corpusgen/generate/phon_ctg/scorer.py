@@ -4,7 +4,7 @@ Scores candidate text based on its contribution to covering remaining
 phonetic targets. Supports a composite score combining coverage gain,
 phonotactic legality, and fluency — mirroring the Phon-CTG reward function:
 
-    R = w_cov · R_coverage + w_phono · R_phonotactic + w_fluency · R_fluency
+    R = w_cov · R_coverage + w_phono · R_phonotactic + w_fluency · R_fluency + w_read · R_readability
 
 Operates in two modes:
     - **Peek** (``score``/``score_batch``/``rank``): non-destructive evaluation
@@ -42,6 +42,7 @@ class ScoreResult:
     fluency_score: float
     composite_score: float
     new_units: set[str]
+    readability_score: float = 0.0
 
 
 class PhoneticScorer:
@@ -52,9 +53,12 @@ class PhoneticScorer:
         phonotactic_scorer: Optional callable (phonemes -> float) for
             phonotactic legality scoring.
         fluency_scorer: Optional callable (text -> float) for fluency scoring.
+        readability_scorer: Optional callable (text -> float) for readability
+            scoring.  See :class:`ReadabilityScorer` for a ready-made implementation.
         coverage_weight: Weight for the coverage component in the composite score.
         phonotactic_weight: Weight for the phonotactic component.
         fluency_weight: Weight for the fluency component.
+        readability_weight: Weight for the readability component.
     """
 
     def __init__(
@@ -62,16 +66,20 @@ class PhoneticScorer:
         targets: PhoneticTargetInventory,
         phonotactic_scorer: Callable[[list[str]], float] | None = None,
         fluency_scorer: Callable[[str | None], float] | None = None,
+        readability_scorer: Callable[[str | None], float] | None = None,
         coverage_weight: float = 1.0,
         phonotactic_weight: float = 0.0,
         fluency_weight: float = 0.0,
+        readability_weight: float = 0.0,
     ) -> None:
         self._targets = targets
         self._phonotactic_scorer = phonotactic_scorer
         self._fluency_scorer = fluency_scorer
+        self._readability_scorer = readability_scorer
         self._coverage_weight = coverage_weight
         self._phonotactic_weight = phonotactic_weight
         self._fluency_weight = fluency_weight
+        self._readability_weight = readability_weight
 
     # -------------------------------------------------------------------
     # Properties
@@ -96,6 +104,11 @@ class PhoneticScorer:
     def fluency_weight(self) -> float:
         """Weight for fluency component in composite score."""
         return self._fluency_weight
+
+    @property
+    def readability_weight(self) -> float:
+        """Weight for readability component in composite score."""
+        return self._readability_weight
 
     # -------------------------------------------------------------------
     # Internal: compute units from phoneme list
@@ -162,11 +175,18 @@ class PhoneticScorer:
         else:
             fluency_score = 0.0
 
+        # Readability score
+        if self._readability_scorer is not None:
+            readability_score = self._readability_scorer(text)
+        else:
+            readability_score = 0.0
+
         # Composite
         composite = (
             self._coverage_weight * weighted_gain
             + self._phonotactic_weight * phonotactic_score
             + self._fluency_weight * fluency_score
+            + self._readability_weight * readability_score
         )
 
         return ScoreResult(
@@ -178,6 +198,7 @@ class PhoneticScorer:
             fluency_score=fluency_score,
             composite_score=composite,
             new_units=new_units,
+            readability_score=readability_score,
         )
 
     # -------------------------------------------------------------------
