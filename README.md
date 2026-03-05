@@ -1,5 +1,7 @@
 # corpusgen
 
+[![DOI](https://zenodo.org/badge/1021961235.svg)](https://doi.org/10.5281/zenodo.18881479)
+
 **Language-agnostic framework for generating and evaluating speech corpora with maximal phoneme coverage.**
 
 `corpusgen` helps you build phonetically-balanced text corpora for speech synthesis (TTS), speech recognition (ASR), and clinical speech assessment — in any language.
@@ -631,10 +633,11 @@ For reproducible results across machines:
 If you use `corpusgen` in your research, please cite:
 
 ```bibtex
-@software{corpusgen2025,
+@software{corpusgen2026,
   title={corpusgen: Language-Agnostic Speech Corpus Generation with Maximal Phoneme Coverage},
   author={Syed, Muntaser},
-  year={2025},
+  year={2026},
+  doi={10.5281/zenodo.18881479},
   url={https://github.com/jemsbhai/corpusgen}
 }
 ```

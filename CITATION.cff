@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: "corpusgen: Language-Agnostic Speech Corpus Generation with Maximal Phoneme Coverage"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Syed
+    given-names: Muntaser
+repository-code: https://github.com/jemsbhai/corpusgen
+url: https://pypi.org/project/corpusgen/
+license: Apache-2.0
+version: 0.1.3
+doi: 10.5281/zenodo.18881479
+date-released: "2026-02-26"
+keywords:
+  - speech-corpus
+  - phoneme-coverage
+  - tts
+  - asr
+  - corpus-generation
+  - phonetics
