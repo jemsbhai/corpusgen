@@ -1,7 +1,7 @@
 """Phoneme inventory management: PHOIBLE integration and custom inventories."""
 
 from corpusgen.inventory.mapping import EspeakMapping
-from corpusgen.inventory.models import Segment, Inventory, FEATURE_NAMES
+from corpusgen.inventory.models import FEATURE_NAMES, Inventory, Segment
 from corpusgen.inventory.phoible import PhoibleDataset
 
 __all__ = [

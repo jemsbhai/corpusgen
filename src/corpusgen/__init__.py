@@ -27,8 +27,8 @@ def get_inventory(
     Raises:
         KeyError: If the language identifier is not found.
     """
-    from corpusgen.inventory.phoible import PhoibleDataset
     from corpusgen.inventory.mapping import EspeakMapping
+    from corpusgen.inventory.phoible import PhoibleDataset
 
     ds = PhoibleDataset()
 

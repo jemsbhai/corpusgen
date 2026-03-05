@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from corpusgen.select.base import SelectorBase
-from corpusgen.select.result import SelectionResult
-from corpusgen.select.greedy import GreedySelector
 from corpusgen.select.celf import CELFSelector
-from corpusgen.select.stochastic import StochasticGreedySelector
 from corpusgen.select.distribution import DistributionAwareSelector
+from corpusgen.select.greedy import GreedySelector
+from corpusgen.select.result import SelectionResult
+from corpusgen.select.stochastic import StochasticGreedySelector
 
 # Optional dependency selectors
 try:

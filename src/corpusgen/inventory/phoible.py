@@ -10,8 +10,7 @@ import csv
 from pathlib import Path
 from typing import Any
 
-from corpusgen.inventory.models import Inventory, Segment, FEATURE_NAMES
-
+from corpusgen.inventory.models import FEATURE_NAMES, Inventory, Segment
 
 _PHOIBLE_CSV_URL = (
     "https://github.com/phoible/dev/blob/master/data/phoible.csv?raw=true"
@@ -108,7 +107,7 @@ class PhoibleDataset:
         # Parse CSV — group rows by InventoryID
         raw_inventories: dict[int, list[dict[str, str]]] = {}
 
-        with open(self._csv_path, "r", encoding="utf-8") as f:
+        with open(self._csv_path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 inv_id = int(row["InventoryID"])

@@ -7,9 +7,8 @@ features, allophones, marginal status, and segment classification.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
-
 
 FEATURE_NAMES: tuple[str, ...] = (
     "tone", "stress", "syllabic", "short", "long",

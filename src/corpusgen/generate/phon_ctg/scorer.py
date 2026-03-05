@@ -13,8 +13,8 @@ Operates in two modes:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
 

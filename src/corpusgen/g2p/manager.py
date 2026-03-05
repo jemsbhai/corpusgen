@@ -11,7 +11,6 @@ from phonemizer.separator import Separator
 
 from corpusgen.g2p.result import G2PResult
 
-
 _ESPEAK_INSTALL_HELP = """
 ===================================================================
  espeak-ng not found — required by corpusgen for phoneme conversion

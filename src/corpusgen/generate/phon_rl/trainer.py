@@ -33,8 +33,9 @@ from __future__ import annotations
 
 import copy
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
 from corpusgen.generate.phon_rl.reward import PhoneticReward

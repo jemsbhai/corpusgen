@@ -28,14 +28,12 @@ References:
 
 from __future__ import annotations
 
-import math
 import re
 import statistics
 import unicodedata
 from collections import Counter
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Word tokenizer

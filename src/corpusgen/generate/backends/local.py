@@ -18,7 +18,6 @@ from typing import Any
 from corpusgen.generate.guidance import GuidanceStrategy
 from corpusgen.generate.phon_ctg.loop import GenerationBackend
 
-
 logger = logging.getLogger(__name__)
 
 

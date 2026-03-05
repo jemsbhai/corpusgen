@@ -8,9 +8,8 @@ dialect grouping, and case-insensitive lookup.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
-
 
 _MAPPING_FILE = Path(__file__).parent.parent / "data" / "espeak_iso_mapping.json"
 
@@ -33,7 +32,7 @@ class EspeakMapping:
         if mapping_file is None:
             mapping_file = _MAPPING_FILE
 
-        with open(mapping_file, "r", encoding="utf-8") as f:
+        with open(mapping_file, encoding="utf-8") as f:
             raw = json.load(f)
 
         # Remove metadata keys

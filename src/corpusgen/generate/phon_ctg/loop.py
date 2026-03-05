@@ -18,12 +18,12 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from corpusgen.generate.phon_ctg.scorer import PhoneticScorer
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
-
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +140,11 @@ class GenerationLoop:
             full coverage with no other limits.
         candidates_per_iteration: How many candidates to request
             from the backend each iteration.
+        candidate_filter: Optional callable ``(candidate_dict) -> bool``.
+            Applied to each candidate before ranking.  Candidates for
+            which the filter returns ``False`` are discarded.  Use
+            :meth:`ReadabilityScorer.as_filter` for readability-based
+            hard filtering.
         on_progress: Optional callback invoked after each accepted
             sentence. Receives a dict with iteration info.
     """
@@ -151,6 +156,7 @@ class GenerationLoop:
         scorer: PhoneticScorer,
         stopping_criteria: StoppingCriteria | None = None,
         candidates_per_iteration: int = 5,
+        candidate_filter: Callable[[dict], bool] | None = None,
         on_progress: Callable[[dict], None] | None = None,
     ) -> None:
         self._backend = backend
@@ -158,6 +164,7 @@ class GenerationLoop:
         self._scorer = scorer
         self._stopping = stopping_criteria or StoppingCriteria()
         self._candidates_per_iteration = candidates_per_iteration
+        self._candidate_filter = candidate_filter
         self._on_progress = on_progress
 
     @property
@@ -261,7 +268,13 @@ class GenerationLoop:
                 k=self._candidates_per_iteration,
             )
 
-            # 3. Handle empty response
+            # 3. Apply candidate filter (if provided)
+            if self._candidate_filter is not None:
+                candidates = [
+                    c for c in candidates if self._candidate_filter(c)
+                ]
+
+            # 4. Handle empty response (after filtering)
             if not candidates:
                 stop_reason = "backend_exhausted"
                 logger.info(

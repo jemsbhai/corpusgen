@@ -29,9 +29,9 @@ References:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Any, Sequence
-
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Edit distance
