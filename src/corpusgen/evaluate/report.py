@@ -9,6 +9,7 @@ from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from corpusgen.evaluate.distribution import DistributionMetrics
+    from corpusgen.evaluate.text_quality import TextQualityMetrics
 
 
 class Verbosity(Enum):
@@ -69,6 +70,7 @@ class EvaluationReport:
     sentence_details: list[SentenceDetail] = field(default_factory=list)
     phoneme_sources: dict[str, list[int]] = field(default_factory=dict)
     distribution: DistributionMetrics | None = None
+    text_quality: TextQualityMetrics | None = None
 
     # --- Rendering ---
 
@@ -132,6 +134,26 @@ class EvaluationReport:
                 parts.append(f"  Pearson correlation: {dm.pearson_correlation:.6f}")
             parts.append("")
 
+        # Text quality metrics
+        if self.text_quality is not None:
+            tq = self.text_quality
+            parts.append("Text quality:")
+            parts.append(f"  Sentence length (words): mean={tq.sentence_length_words_mean:.1f}, "
+                         f"median={tq.sentence_length_words_median:.1f}, "
+                         f"std={tq.sentence_length_words_std:.1f}, "
+                         f"range=[{tq.sentence_length_words_min}, {tq.sentence_length_words_max}]")
+            parts.append(f"  Sentence length (phonemes): mean={tq.sentence_length_phonemes_mean:.1f}, "
+                         f"median={tq.sentence_length_phonemes_median:.1f}, "
+                         f"std={tq.sentence_length_phonemes_std:.1f}, "
+                         f"range=[{tq.sentence_length_phonemes_min}, {tq.sentence_length_phonemes_max}]")
+            parts.append(f"  Vocabulary: {tq.unique_words} types / {tq.total_words} tokens "
+                         f"(TTR={tq.type_token_ratio:.4f}, hapax={tq.hapax_ratio:.4f})")
+            if tq.flesch_reading_ease is not None:
+                parts.append(f"  Flesch Reading Ease: {tq.flesch_reading_ease:.1f}")
+            if tq.flesch_kincaid_grade is not None:
+                parts.append(f"  Flesch-Kincaid Grade: {tq.flesch_kincaid_grade:.1f}")
+            parts.append("")
+
         # Per-phoneme counts
         parts.append("Per-phoneme counts:")
         for phoneme in sorted(self.phoneme_counts.keys()):
@@ -191,6 +213,7 @@ class EvaluationReport:
             ],
             "phoneme_sources": dict(self.phoneme_sources),
             "distribution": self.distribution.to_dict() if self.distribution is not None else None,
+            "text_quality": self.text_quality.to_dict() if self.text_quality is not None else None,
         }
 
     def to_json(self, indent: int | None = None) -> str:
@@ -226,6 +249,7 @@ class EvaluationReport:
                 "sentence_details": "corpusgen:sentenceDetails",
                 "phoneme_sources": "corpusgen:phonemeSources",
                 "distribution": "corpusgen:distributionMetrics",
+                "text_quality": "corpusgen:textQualityMetrics",
             },
             "@type": "corpusgen:EvaluationReport",
             **base,

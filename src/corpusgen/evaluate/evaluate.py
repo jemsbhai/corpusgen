@@ -5,6 +5,7 @@ from __future__ import annotations
 from corpusgen.coverage.tracker import CoverageTracker
 from corpusgen.evaluate.distribution import compute_distribution_metrics
 from corpusgen.evaluate.report import EvaluationReport, SentenceDetail
+from corpusgen.evaluate.text_quality import compute_text_quality_metrics
 from corpusgen.g2p.manager import G2PManager
 from corpusgen.g2p.result import G2PResult
 
@@ -137,7 +138,11 @@ def evaluate(
         target_phonemes=target_units_list,
     )
 
-    # --- Step 5: Assemble report ---
+    # --- Step 5: Compute text quality metrics ---
+    phoneme_sequences = [r.phonemes for r in g2p_results]
+    text_quality = compute_text_quality_metrics(sentences, phoneme_sequences)
+
+    # --- Step 6: Assemble report ---
     return EvaluationReport(
         language=language,
         unit=unit,
@@ -150,4 +155,5 @@ def evaluate(
         sentence_details=sentence_details,
         phoneme_sources=tracker.phoneme_sources,
         distribution=distribution,
+        text_quality=text_quality,
     )
