@@ -37,6 +37,36 @@ pyyaml = ">=6.0"
 tqdm = ">=4.65"
 click = ">=8.1"
 
+# --- Optional deps (for pip extras) ---
+litellm = {version = ">=1.40", optional = true}
+openai = {version = ">=1.12", optional = true}
+anthropic = {version = ">=0.25", optional = true}
+torch = {version = ">=2.1", optional = true}
+transformers = {version = ">=4.38", optional = true}
+bitsandbytes = {version = ">=0.43", optional = true}
+peft = {version = ">=0.10", optional = true}
+datasets = {version = ">=2.18", optional = true}
+huggingface-hub = {version = ">=0.20", optional = true}
+scipy = {version = ">=1.11", optional = true}
+matplotlib = {version = ">=3.8", optional = true}
+pulp = {version = ">=2.7", optional = true}
+pymoo = {version = ">=0.6", optional = true}
+
+[tool.poetry.extras]
+llm = ["litellm", "openai", "anthropic"]
+local = ["torch", "transformers", "bitsandbytes", "peft"]
+neural-g2p = ["torch", "transformers"]
+repository = ["datasets", "huggingface-hub"]
+optimization = ["pulp", "pymoo"]
+eval = ["scipy", "matplotlib"]
+full = [
+    "litellm", "openai", "anthropic",
+    "torch", "transformers", "bitsandbytes", "peft",
+    "datasets", "huggingface-hub",
+    "scipy", "matplotlib",
+    "pulp", "pymoo",
+]
+
 # --- Optional dependency groups ---
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
@@ -94,6 +124,7 @@ openai = ">=1.12"
 anthropic = ">=0.25"
 torch = ">=2.1"
 transformers = ">=4.38"
+bitsandbytes = ">=0.43"
 peft = ">=0.10"
 scipy = ">=1.11"
 matplotlib = ">=3.8"
@@ -120,9 +151,30 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = [
+    "B905",   # zip-without-explicit-strict
+    "E501",   # line-too-long (handled by formatter)
+    "SIM108", # if-else-block-instead-of-if-exp
+    "F841",   # unused-variable
+    "N806",   # non-lowercase-variable-in-function
+    "N803",   # invalid-argument-name
+    "N812",   # lowercase-imported-as-non-lowercase
+    "B904",   # raise-without-from-inside-except
+    "B007",   # unused-loop-control-variable
+    "SIM102", # collapsible-if
+]
 
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "phonemizer.*",
+    "litellm.*",
+    "pulp.*",
+    "pymoo.*",
+]
+ignore_missing_imports = true
