@@ -14,6 +14,7 @@
 - **Coverage trajectory tracking** — step-by-step coverage saturation curves for any selection or generation result
 - **Text quality metrics** — sentence length stats, vocabulary diversity (TTR, hapax ratio), Flesch readability scores
 - **Error rate metrics** — WER, CER, PER, SER with per-sentence breakdowns and corpus-level micro-averaging
+- **Corpus-level perplexity** — batched LM perplexity via GPT-2 (or any causal LM), both token-weighted corpus perplexity and sentence-weighted mean, with model sharing support
 - **Structured reports** — three verbosity levels, JSON export, JSON-LD-EX compatibility
 - **40-language test suite** — validated across 12 language families
 
@@ -424,6 +425,40 @@ print(f"Flesch Reading Ease: {tq.flesch_reading_ease:.1f}")
 print(f"Avg sentence length: {tq.sentence_length_words_mean:.1f} words")
 ```
 
+### Measure corpus perplexity
+
+```python
+from corpusgen.evaluate.perplexity import compute_corpus_perplexity
+
+# Simple — loads GPT-2 automatically (requires: poetry install --with local)
+metrics = compute_corpus_perplexity(
+    ["The cat sat on the mat.", "Big dogs dig deep holes."],
+    model_name="gpt2",
+)
+
+print(f"Corpus perplexity: {metrics.corpus_perplexity:.2f}")  # token-weighted (standard LM metric)
+print(f"Mean perplexity:   {metrics.mean_perplexity:.2f}")    # sentence-weighted
+print(f"Median:            {metrics.median_perplexity:.2f}")
+print(f"Total tokens:      {metrics.num_tokens}")
+
+# Per-sentence breakdown
+for i, ppl in enumerate(metrics.per_sentence):
+    print(f"  Sentence {i}: PPL = {ppl:.2f}")
+
+# Shared model — avoids loading the same model twice when you are
+# also using PerplexityFluencyScorer during generation:
+from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
+
+scorer = PerplexityFluencyScorer(model_name="gpt2", device="cuda")
+scorer("warm-up call to trigger lazy load")
+
+metrics = compute_corpus_perplexity(
+    sentences,
+    model=scorer._model,
+    tokenizer=scorer._tokenizer,
+)
+```
+
 ### Compare transcriptions with error rates
 
 ```python
@@ -533,7 +568,8 @@ corpusgen/
 │   ├── distribution.py   # DistributionMetrics — JSD, entropy, PCD, Pearson
 │   ├── trajectory.py     # CoverageTrajectory — step-by-step saturation curves
 │   ├── text_quality.py   # TextQualityMetrics — TTR, readability, sentence stats
-│   └── error_rates.py    # WER, CER, PER, SER with edit distance
+│   ├── error_rates.py    # WER, CER, PER, SER with edit distance
+│   └── perplexity.py     # Corpus-level perplexity (batched, GPU-accelerated)
 ├── inventory/
 │   ├── models.py         # Segment (38 features), Inventory
 │   ├── phoible.py        # PhoibleDataset — PHOIBLE loader/cache/query
