@@ -10,6 +10,10 @@
 - **PHOIBLE integration** — phoneme inventories for 2,186 languages (3,020 inventories)
 - **Grapheme-to-phoneme** via espeak-ng for 100+ languages
 - **Espeak ↔ PHOIBLE mapping** — seamless bridge between G2P and phonological databases
+- **Distribution quality metrics** — Shannon entropy, normalized entropy, JSD (vs uniform or reference), Pearson correlation, coefficient of variation, PCD composite score
+- **Coverage trajectory tracking** — step-by-step coverage saturation curves for any selection or generation result
+- **Text quality metrics** — sentence length stats, vocabulary diversity (TTR, hapax ratio), Flesch readability scores
+- **Error rate metrics** — WER, CER, PER, SER with per-sentence breakdowns and corpus-level micro-averaging
 - **Structured reports** — three verbosity levels, JSON export, JSON-LD-EX compatibility
 - **40-language test suite** — validated across 12 language families
 
@@ -351,6 +355,103 @@ print(report.render(verbosity=Verbosity.NORMAL))
 print(report.render(verbosity=Verbosity.VERBOSE))
 ```
 
+### Analyze distribution quality
+
+```python
+import corpusgen
+
+report = corpusgen.evaluate(
+    ["The cat sat on the mat.", "Big dogs dig deep holes."],
+    language="en-us",
+    target_phonemes="phoible",
+)
+
+# Distribution metrics are auto-computed
+dm = report.distribution
+print(f"Normalized entropy: {dm.normalized_entropy:.4f}")  # 1.0 = perfectly uniform
+print(f"JSD vs uniform: {dm.jsd_uniform:.6f}")             # 0.0 = perfectly uniform
+print(f"PCD (uniform): {dm.pcd_uniform:.4f}")              # coverage × (1 - JSD)
+
+# Compare against a natural language reference distribution
+from corpusgen.evaluate.distribution import compute_distribution_metrics
+
+reference = {"p": 0.04, "t": 0.07, "k": 0.03, "ə": 0.12}  # example frequencies
+dm_ref = compute_distribution_metrics(
+    report.phoneme_counts, report.target_phonemes, reference_distribution=reference
+)
+print(f"JSD vs reference: {dm_ref.jsd_reference:.6f}")
+print(f"Pearson correlation: {dm_ref.pearson_correlation}")
+```
+
+### Plot coverage saturation curves
+
+```python
+from corpusgen.evaluate.trajectory import compute_coverage_trajectory
+
+# From a SelectionResult
+traj = compute_coverage_trajectory(
+    [candidate_phonemes[i] for i in result.selected_indices],
+    target_units=result.covered_units | result.missing_units,
+    unit=result.unit,
+)
+
+# Easy plotting
+import matplotlib.pyplot as plt
+plt.plot(range(len(traj.coverages)), traj.coverages)
+plt.xlabel("Sentences")
+plt.ylabel("Coverage")
+plt.title("Coverage Saturation Curve")
+plt.show()
+
+# Access marginal gains per sentence
+print(traj.gains)  # [5, 3, 2, 1, 1, 0, ...]
+```
+
+### Evaluate text quality
+
+```python
+import corpusgen
+
+report = corpusgen.evaluate(
+    ["The cat sat on the mat.", "Big dogs dig deep holes."],
+    language="en-us",
+)
+
+# Text quality metrics are auto-computed
+tq = report.text_quality
+print(f"Type-Token Ratio: {tq.type_token_ratio:.3f}")
+print(f"Flesch Reading Ease: {tq.flesch_reading_ease:.1f}")
+print(f"Avg sentence length: {tq.sentence_length_words_mean:.1f} words")
+```
+
+### Compare transcriptions with error rates
+
+```python
+from corpusgen.evaluate.error_rates import compute_error_rates
+
+result = compute_error_rates(
+    references=["the cat sat on the mat", "big dogs dig deep holes"],
+    hypotheses=["the cat sat on a mat", "big dog dig deep hole"],
+)
+
+print(f"WER: {result.wer:.2%}")   # corpus-level, micro-averaged
+print(f"CER: {result.cer:.2%}")
+print(f"SER: {result.ser:.2%}")
+
+# With phoneme-level comparison
+result = compute_error_rates(
+    references=["the cat"],
+    hypotheses=["a cat"],
+    reference_phonemes=[["\u00f0", "\u0259", "k", "\u00e6", "t"]],
+    hypothesis_phonemes=[["\u0259", "k", "\u00e6", "t"]],
+)
+print(f"PER: {result.per:.2%}")
+
+# Per-sentence breakdown
+for d in result.details:
+    print(f"  [{d.index}] WER={d.wer:.2%} CER={d.cer:.2%}")
+```
+
 ## CLI Usage
 
 ```bash
@@ -428,7 +529,11 @@ corpusgen/
 │   └── tracker.py        # CoverageTracker — phoneme/diphone/triphone tracking
 ├── evaluate/
 │   ├── evaluate.py       # evaluate() — top-level API
-│   └── report.py         # EvaluationReport, Verbosity
+│   ├── report.py         # EvaluationReport, Verbosity
+│   ├── distribution.py   # DistributionMetrics — JSD, entropy, PCD, Pearson
+│   ├── trajectory.py     # CoverageTrajectory — step-by-step saturation curves
+│   ├── text_quality.py   # TextQualityMetrics — TTR, readability, sentence stats
+│   └── error_rates.py    # WER, CER, PER, SER with edit distance
 ├── inventory/
 │   ├── models.py         # Segment (38 features), Inventory
 │   ├── phoible.py        # PhoibleDataset — PHOIBLE loader/cache/query
