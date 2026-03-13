@@ -769,3 +769,162 @@ class TestLoopEdgeCases:
         result = loop.run()
         assert result.stop_reason == "backend_exhausted"
         assert result.num_generated == 0
+
+
+# ---------------------------------------------------------------------------
+# Candidate filter
+# ---------------------------------------------------------------------------
+
+
+class TestCandidateFilter:
+    """Test generic candidate_filter callback in GenerationLoop."""
+
+    def test_no_filter_by_default(self):
+        """Without a filter, all candidates reach ranking (backward compat)."""
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p", "b", "t"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+        backend = FakeBackend(responses=[
+            [{"text": "first", "phonemes": ["p", "b", "t"]}],
+        ])
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+        )
+        result = loop.run()
+        assert result.num_generated == 1
+        assert result.coverage == 1.0
+
+    def test_filter_accepts_good_candidates(self):
+        """Candidates passing the filter are accepted normally."""
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p", "b"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+        backend = FakeBackend(responses=[
+            [{"text": "good", "phonemes": ["p", "b"]}],
+        ])
+        # Filter that accepts everything
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+            candidate_filter=lambda c: True,
+        )
+        result = loop.run()
+        assert result.num_generated == 1
+
+    def test_filter_rejects_all_candidates(self):
+        """When filter rejects all candidates, loop exhausts backend."""
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+        backend = FakeBackend(responses=[
+            [{"text": "bad", "phonemes": ["p"]}],
+            [{"text": "also bad", "phonemes": ["p"]}],
+        ])
+        # Filter that rejects everything
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+            candidate_filter=lambda c: False,
+        )
+        result = loop.run()
+        assert result.num_generated == 0
+        assert result.stop_reason == "backend_exhausted"
+
+    def test_filter_selectively_removes_candidates(self):
+        """Only candidates passing the filter are ranked and committed."""
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p", "b"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+        # Two candidates: one with text "reject", one with text "accept"
+        backend = FakeBackend(responses=[
+            [
+                {"text": "reject", "phonemes": ["p"]},
+                {"text": "accept", "phonemes": ["p", "b"]},
+            ],
+        ])
+        # Only accept candidates whose text is not "reject"
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+            candidate_filter=lambda c: c.get("text") != "reject",
+        )
+        result = loop.run()
+        assert result.num_generated == 1
+        assert result.generated_sentences == ["accept"]
+
+    def test_filter_receives_candidate_dict(self):
+        """Filter callable receives the raw candidate dict from the backend."""
+        received = []
+
+        def capture_filter(candidate):
+            received.append(dict(candidate))
+            return True
+
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+        backend = FakeBackend(responses=[
+            [{"text": "hello", "phonemes": ["p"]}],
+        ])
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+            candidate_filter=capture_filter,
+        )
+        loop.run()
+        assert len(received) == 1
+        assert received[0]["text"] == "hello"
+        assert received[0]["phonemes"] == ["p"]
+
+    def test_filter_with_readability_scorer_as_filter(self):
+        """Integration: ReadabilityScorer.as_filter() works as candidate_filter.
+
+        This is the primary use case for the generic filter mechanism.
+        """
+        from corpusgen.generate.scorers.readability import ReadabilityScorer
+
+        targets = PhoneticTargetInventory(
+            target_phonemes=["p", "b", "t"],
+            unit="phoneme",
+        )
+        scorer = PhoneticScorer(targets=targets)
+
+        # FRE of "The cat sat on the mat" is high (~116),
+        # so a filter requiring [40, 90] should reject it.
+        # "She sells seashells by the seashore on a sunny day" FRE ~86.7 passes.
+        backend = FakeBackend(responses=[
+            [
+                {"text": "The cat sat on the mat", "phonemes": ["p", "b"]},
+                {"text": "She sells seashells by the seashore on a sunny day", "phonemes": ["p", "b", "t"]},
+            ],
+        ])
+
+        rs = ReadabilityScorer()
+        filt = rs.as_filter(min_fre=40, max_fre=90)
+
+        loop = GenerationLoop(
+            backend=backend,
+            targets=targets,
+            scorer=scorer,
+            candidate_filter=filt,
+        )
+        result = loop.run()
+        assert result.num_generated == 1
+        # The accepted sentence should be the one that passed the filter
+        assert "seashells" in result.generated_sentences[0]
