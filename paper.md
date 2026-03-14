@@ -47,8 +47,14 @@ Designed for researchers in speech processing, corpus linguistics, and Natural L
 
 By abstracting away the heavy engineering requirements of G2P mapping and distributed LLM generation, `corpusgen` allows researchers to focus directly on algorithmic design and linguistic analysis, accelerating the creation of equitable, high-quality speech resources across thousands of languages.
 
+# Comparison to existing software
+
+Existing tools address individual components of the speech corpus engineering pipeline but none provide an integrated, language-agnostic framework. Festival/FestVox [@black_lenzo_festvox] offers greedy bigram-based prompt selection for TTS voice building, but is primarily English-centric and tightly coupled to its synthesis architecture. Phonemizer [@phonemizer] provides robust grapheme-to-phoneme conversion—which `corpusgen` uses as a backend—but includes no selection, generation, or evaluation capabilities. Phonological CorpusTools [@pct_hall] supports phonological analysis of existing corpora (e.g., functional load, phonotactic probability) but does not address corpus construction or optimization. Beyond these tools, researchers typically rely on ad-hoc, language-specific scripts implementing greedy selection heuristics [@bozkurt_greedy], which are rarely packaged or reproducible.
+
+`corpusgen` fills this gap by providing a unified pipeline from G2P conversion and PHOIBLE-backed inventory lookup through six pluggable selection algorithms to LLM-driven constrained text generation—capabilities that, to our knowledge, no existing package combines.
+
 # Acknowledgements
 
-This framework was developed in support of doctoral research conducted at the Florida Institute of Technology. 
+This framework was developed in support of doctoral research conducted at the Florida Institute of Technology. The author thanks Marius Silaghi for guidance and feedback during the development of this work. The author also acknowledges the developers of espeak-ng and the PHOIBLE project, whose open resources make language-agnostic phonetic analysis possible.
 
 # References

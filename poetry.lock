@@ -6,11 +6,12 @@ version = "4.2.1"
 description = "Easily measure timing and throughput of code blocks, with beautiful human friendly representations."
 optional = false
 python-versions = ">=3.7, <4"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "about-time-4.2.1.tar.gz", hash = "sha256:6a538862d33ce67d997429d14998310e1dbfda6cb7d9bbfbf799c4709847fece"},
     {file = "about_time-4.2.1-py3-none-any.whl", hash = "sha256:8bbf4c75fe13cbd3d72f49a03b02c5c7dca32169b6d49117c257e7eb3eaee341"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [[package]]
 name = "accelerate"
@@ -18,11 +19,12 @@ version = "1.12.0"
 description = "Accelerate"
 optional = false
 python-versions = ">=3.10.0"
-groups = ["full", "local"]
+groups = ["main", "full", "local"]
 files = [
     {file = "accelerate-1.12.0-py3-none-any.whl", hash = "sha256:3e2091cd341423207e2f084a6654b1efcd250dc326f2a37d6dde446e07cabb11"},
     {file = "accelerate-1.12.0.tar.gz", hash = "sha256:70988c352feb481887077d2ab845125024b2a137a5090d6d7a32b57d03a45df6"},
 ]
+markers = {main = "extra == \"local\" or extra == \"full\""}
 
 [package.dependencies]
 huggingface_hub = ">=0.21.0"
@@ -51,11 +53,12 @@ version = "2.6.1"
 description = "Happy Eyeballs for asyncio"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "aiohappyeyeballs-2.6.1-py3-none-any.whl", hash = "sha256:f349ba8f4b75cb25c99c5c2d84e997e485204d2902a9597802b0371f09331fb8"},
     {file = "aiohappyeyeballs-2.6.1.tar.gz", hash = "sha256:c3f9d0113123803ccadfdf3f0faa505bc78e6a72d1cc4806cbd719826e943558"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [[package]]
 name = "aiohttp"
@@ -63,7 +66,7 @@ version = "3.13.3"
 description = "Async http client/server framework (asyncio)"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "aiohttp-3.13.3-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d5a372fd5afd301b3a89582817fdcdb6c34124787c70dbcc616f259013e7eef7"},
     {file = "aiohttp-3.13.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:147e422fd1223005c22b4fe080f5d93ced44460f5f9c105406b753612b587821"},
@@ -186,6 +189,7 @@ files = [
     {file = "aiohttp-3.13.3-cp39-cp39-win_amd64.whl", hash = "sha256:c6b8568a3bb5819a0ad087f16d40e5a3fb6099f39ea1d5625a3edc1e923fc538"},
     {file = "aiohttp-3.13.3.tar.gz", hash = "sha256:a949eee43d3782f2daae4f4a2819b2cb9b0c5d3b7f7a927067cc84dafdbb9f88"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [package.dependencies]
 aiohappyeyeballs = ">=2.5.0"
@@ -206,11 +210,12 @@ version = "1.4.0"
 description = "aiosignal: a list of registered asynchronous callbacks"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "aiosignal-1.4.0-py3-none-any.whl", hash = "sha256:053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e"},
     {file = "aiosignal-1.4.0.tar.gz", hash = "sha256:f47eecd9468083c2029cc99945502cb7708b082c232f9aca65da147157b251c7"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
@@ -222,11 +227,12 @@ version = "3.3.0"
 description = "A new kind of Progress Bar, with real-time throughput, ETA, and very cool animations!"
 optional = false
 python-versions = "<4,>=3.9"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "alive-progress-3.3.0.tar.gz", hash = "sha256:457dd2428b48dacd49854022a46448d236a48f1b7277874071c39395307e830c"},
     {file = "alive_progress-3.3.0-py3-none-any.whl", hash = "sha256:63dd33bb94cde15ad9e5b666dbba8fedf71b72a4935d6fb9a92931e69402c9ff"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 about-time = "4.2.1"
@@ -238,11 +244,12 @@ version = "0.0.4"
 description = "Document parameters, class attributes, return types, and variables inline, with Annotated."
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "annotated_doc-0.0.4-py3-none-any.whl", hash = "sha256:571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320"},
     {file = "annotated_doc-0.0.4.tar.gz", hash = "sha256:fbcda96e87e9c92ad167c2e53839e57503ecfda18804ea28102353485033faa4"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [[package]]
 name = "annotated-types"
@@ -250,11 +257,12 @@ version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [[package]]
 name = "anthropic"
@@ -262,11 +270,12 @@ version = "0.83.0"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "anthropic-0.83.0-py3-none-any.whl", hash = "sha256:f069ef508c73b8f9152e8850830d92bd5ef185645dbacf234bb213344a274810"},
     {file = "anthropic-0.83.0.tar.gz", hash = "sha256:a8732c68b41869266c3034541a31a29d8be0f8cd0a714f9edce3128b351eceb4"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 anyio = ">=3.5.0,<5"
@@ -289,11 +298,12 @@ version = "4.12.1"
 description = "High-level concurrency and networking framework on top of asyncio or Trio"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "anyio-4.12.1-py3-none-any.whl", hash = "sha256:d405828884fc140aa80a3c667b8beed277f1dfedec42ba031bd6ac3db606ab6c"},
     {file = "anyio-4.12.1.tar.gz", hash = "sha256:41cfcc3a4c85d3f05c932da7c26d0201ac36f72abd4435ba90d0464a3ffed703"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 exceptiongroup = {version = ">=1.0.2", markers = "python_version < \"3.11\""}
@@ -309,12 +319,12 @@ version = "5.0.1"
 description = "Timeout context manager for asyncio programs"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "repository"]
-markers = "python_version == \"3.10\""
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c"},
     {file = "async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3"},
 ]
+markers = {main = "python_version == \"3.10\" and (extra == \"llm\" or extra == \"full\" or extra == \"repository\")", full = "python_version == \"3.10\"", llm = "python_version == \"3.10\"", repository = "python_version == \"3.10\""}
 
 [[package]]
 name = "attrs"
@@ -322,7 +332,7 @@ version = "25.4.0"
 description = "Classes Without Boilerplate"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "attrs-25.4.0-py3-none-any.whl", hash = "sha256:adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373"},
     {file = "attrs-25.4.0.tar.gz", hash = "sha256:16d5969b87f0859ef33a48b35d55ac1be6e42ae49d5e853b597db70c35c57e11"},
@@ -334,11 +344,12 @@ version = "1.8.0"
 description = "Efficiently computes derivatives of NumPy code."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "autograd-1.8.0-py3-none-any.whl", hash = "sha256:4ab9084294f814cf56c280adbe19612546a35574d67c574b04933c7d2ecb7d78"},
     {file = "autograd-1.8.0.tar.gz", hash = "sha256:107374ded5b09fc8643ac925348c0369e7b0e73bbed9565ffd61b8fd04425683"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 numpy = "<3"
@@ -368,13 +379,14 @@ version = "0.49.2"
 description = "k-bit optimizers and matrix multiplication routines."
 optional = false
 python-versions = ">=3.10"
-groups = ["local"]
+groups = ["main", "full", "local"]
 files = [
     {file = "bitsandbytes-0.49.2-py3-none-macosx_14_0_arm64.whl", hash = "sha256:87be5975edeac5396d699ecbc39dfc47cf2c026daaf2d5852a94368611a6823f"},
     {file = "bitsandbytes-0.49.2-py3-none-manylinux_2_24_aarch64.whl", hash = "sha256:2fc0830c5f7169be36e60e11f2be067c8f812dfcb829801a8703735842450750"},
     {file = "bitsandbytes-0.49.2-py3-none-manylinux_2_24_x86_64.whl", hash = "sha256:54b771f06e1a3c73af5c7f16ccf0fc23a846052813d4b008d10cb6e017dd1c8c"},
     {file = "bitsandbytes-0.49.2-py3-none-win_amd64.whl", hash = "sha256:2e0ddd09cd778155388023cbe81f00afbb7c000c214caef3ce83386e7144df7d"},
 ]
+markers = {main = "extra == \"local\" or extra == \"full\""}
 
 [package.dependencies]
 numpy = ">=1.17"
@@ -405,7 +417,7 @@ version = "2.0.0"
 description = "Foreign Function Interface for Python calling C code."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "cffi-2.0.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:0cf2d91ecc3fcc0625c2c530fe004f82c110405f101548512cce44322fa8ac44"},
     {file = "cffi-2.0.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f73b96c41e3b2adedc34a7356e64c8eb96e03a3782b535e043a986276ce12a49"},
@@ -492,6 +504,7 @@ files = [
     {file = "cffi-2.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:b882b3df248017dba09d6b16defe9b5c407fe32fc7c65a9c69798e6175601be9"},
     {file = "cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -514,7 +527,7 @@ version = "3.4.4"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 optional = false
 python-versions = ">=3.7"
-groups = ["main", "full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "charset_normalizer-3.4.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e824f1492727fa856dd6eda4f7cee25f8518a12f3c4a56a74e8095695089cf6d"},
     {file = "charset_normalizer-3.4.4-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4bd5d4137d500351a30687c2d3971758aac9a19208fc110ccb9d7188fbe709e8"},
@@ -652,11 +665,12 @@ version = "4.4.3"
 description = "CMA-ES, Covariance Matrix Adaptation Evolution Strategy for non-linear numerical optimization in Python"
 optional = false
 python-versions = "*"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "cma-4.4.3-py3-none-any.whl", hash = "sha256:e2ced58fa5e94cee96306721bac96eb28c804eb085e1f2768f2e53138e9e0c6d"},
     {file = "cma-4.4.3.tar.gz", hash = "sha256:33257a11a813d312c2a5fab0d44f616887d57cd8a2bc620b8c8446c3ff86da46"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 numpy = "*"
@@ -685,8 +699,7 @@ version = "1.3.2"
 description = "Python library for calculating contours of 2D quadrilateral grids"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
-markers = "python_version == \"3.10\""
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "contourpy-1.3.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ba38e3f9f330af820c4b27ceb4b9c7feee5fe0493ea53a8720f4792667465934"},
     {file = "contourpy-1.3.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:dc41ba0714aa2968d1f8674ec97504a8f7e334f48eeacebcaa6256213acb0989"},
@@ -746,6 +759,7 @@ files = [
     {file = "contourpy-1.3.2-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:8c5acb8dddb0752bf252e01a3035b21443158910ac16a3b0d20e7fed7d534ce5"},
     {file = "contourpy-1.3.2.tar.gz", hash = "sha256:b6945942715a034c671b7fc54f9588126b0b8bf23db2696e3ca8328f3ff0ab54"},
 ]
+markers = {main = "python_version == \"3.10\" and (extra == \"eval\" or extra == \"full\" or extra == \"optimization\")", eval = "python_version == \"3.10\"", full = "python_version == \"3.10\"", optimization = "python_version == \"3.10\""}
 
 [package.dependencies]
 numpy = ">=1.23"
@@ -763,8 +777,7 @@ version = "1.3.3"
 description = "Python library for calculating contours of 2D quadrilateral grids"
 optional = false
 python-versions = ">=3.11"
-groups = ["eval", "full", "optimization"]
-markers = "python_version >= \"3.11\""
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "contourpy-1.3.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:709a48ef9a690e1343202916450bc48b9e51c049b089c7f79a267b46cffcdaa1"},
     {file = "contourpy-1.3.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:23416f38bfd74d5d28ab8429cc4d63fa67d5068bd711a85edb1c3fb0c3e2f381"},
@@ -839,6 +852,7 @@ files = [
     {file = "contourpy-1.3.3-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:3d1a3799d62d45c18bafd41c5fa05120b96a28079f2393af559b843d1a966a77"},
     {file = "contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880"},
 ]
+markers = {main = "python_version >= \"3.11\" and (extra == \"eval\" or extra == \"full\" or extra == \"optimization\")", eval = "python_version >= \"3.11\"", full = "python_version >= \"3.11\"", optimization = "python_version >= \"3.11\""}
 
 [package.dependencies]
 numpy = ">=1.25"
@@ -1008,8 +1022,7 @@ version = "12.9.4"
 description = "Python bindings for CUDA"
 optional = false
 python-versions = "*"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "cuda_bindings-12.9.4-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a022c96b8bd847e8dc0675523431149a4c3e872f440e3002213dbb9e08f0331a"},
     {file = "cuda_bindings-12.9.4-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4d3c842c2a4303b2a580fe955018e31aea30278be19795ae05226235268032e5"},
@@ -1036,6 +1049,7 @@ files = [
     {file = "cuda_bindings-12.9.4-cp39-cp39-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9866ceec83e39337d1a1d64837864c964ad902992478caa288a0bc1be95f21aa"},
     {file = "cuda_bindings-12.9.4-cp39-cp39-win_amd64.whl", hash = "sha256:37744e721a18a514423e81863f52a4f7f46f5a6f9cccd569f2735f8067f4d8c2"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 cuda-pathfinder = ">=1.1,<2.0"
@@ -1050,11 +1064,11 @@ version = "1.3.5"
 description = "Pathfinder for CUDA components"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "cuda_pathfinder-1.3.5-py3-none-any.whl", hash = "sha256:6c88220f8637cb35d2a75c620d72efebf683b248b923713d8fbe235844c1a4b9"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "cycler"
@@ -1062,11 +1076,12 @@ version = "0.12.1"
 description = "Composable style cycles"
 optional = false
 python-versions = ">=3.8"
-groups = ["eval", "full", "optimization"]
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "cycler-0.12.1-py3-none-any.whl", hash = "sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30"},
     {file = "cycler-0.12.1.tar.gz", hash = "sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c"},
 ]
+markers = {main = "extra == \"eval\" or extra == \"full\" or extra == \"optimization\""}
 
 [package.extras]
 docs = ["ipython", "matplotlib", "numpydoc", "sphinx"]
@@ -1078,11 +1093,12 @@ version = "4.5.0"
 description = "HuggingFace community-driven open-source library of datasets"
 optional = false
 python-versions = ">=3.9.0"
-groups = ["full", "local", "repository"]
+groups = ["main", "full", "repository"]
 files = [
     {file = "datasets-4.5.0-py3-none-any.whl", hash = "sha256:b5d7e08096ffa407dd69e58b1c0271c9b2506140839b8d99af07375ad31b6726"},
     {file = "datasets-4.5.0.tar.gz", hash = "sha256:00c698ce1c2452e646cc5fad47fef39d3fe78dd650a8a6eb205bb45eb63cd500"},
 ]
+markers = {main = "extra == \"repository\" or extra == \"full\""}
 
 [package.dependencies]
 dill = ">=0.3.0,<0.4.1"
@@ -1122,11 +1138,12 @@ version = "1.3.1"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "deprecated-1.3.1-py2.py3-none-any.whl", hash = "sha256:597bfef186b6f60181535a29fbe44865ce137a5079f295b479886c82729d5f3f"},
     {file = "deprecated-1.3.1.tar.gz", hash = "sha256:b1b50e0ff0c1fddaa5708a2c6b0a6588bb09b892825ab2b214ac9ea9d92a5223"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 wrapt = ">=1.10,<3"
@@ -1140,11 +1157,12 @@ version = "0.4.0"
 description = "serialize all of Python"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "local", "repository"]
+groups = ["main", "full", "repository"]
 files = [
     {file = "dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049"},
     {file = "dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0"},
 ]
+markers = {main = "extra == \"repository\" or extra == \"full\""}
 
 [package.extras]
 graph = ["objgraph (>=1.7.2)"]
@@ -1168,11 +1186,12 @@ version = "1.9.0"
 description = "Distro - an OS platform information API"
 optional = false
 python-versions = ">=3.6"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"},
     {file = "distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [[package]]
 name = "dlinfo"
@@ -1192,11 +1211,12 @@ version = "0.17.0"
 description = "Parse Python docstrings in reST, Google and Numpydoc format"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "docstring_parser-0.17.0-py3-none-any.whl", hash = "sha256:cf2569abd23dce8099b300f9b4fa8191e9582dda731fd533daf54c4551658708"},
     {file = "docstring_parser-0.17.0.tar.gz", hash = "sha256:583de4a309722b3315439bb31d64ba3eebada841f2e2cee23b99df001434c912"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.extras]
 dev = ["pre-commit (>=2.16.0) ; python_version >= \"3.9\"", "pydoctor (>=25.4.0)", "pytest"]
@@ -1290,12 +1310,12 @@ version = "1.3.1"
 description = "Backport of PEP 654 (exception groups)"
 optional = false
 python-versions = ">=3.7"
-groups = ["dev", "full", "llm", "local", "neural-g2p", "repository"]
-markers = "python_version == \"3.10\""
+groups = ["main", "dev", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "exceptiongroup-1.3.1-py3-none-any.whl", hash = "sha256:a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598"},
     {file = "exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219"},
 ]
+markers = {main = "python_version == \"3.10\" and (extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\")", dev = "python_version == \"3.10\"", full = "python_version == \"3.10\"", llm = "python_version == \"3.10\"", local = "python_version == \"3.10\"", neural-g2p = "python_version == \"3.10\"", repository = "python_version == \"3.10\""}
 
 [package.dependencies]
 typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
@@ -1309,7 +1329,7 @@ version = "0.14.0"
 description = "Python bindings to Rust's UUID library."
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "fastuuid-0.14.0-cp310-cp310-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:6e6243d40f6c793c3e2ee14c13769e341b90be5ef0c23c82fa6515a96145181a"},
     {file = "fastuuid-0.14.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:13ec4f2c3b04271f62be2e1ce7e95ad2dd1cf97e94503a3760db739afbd48f00"},
@@ -1390,6 +1410,7 @@ files = [
     {file = "fastuuid-0.14.0-cp39-cp39-win_amd64.whl", hash = "sha256:84b0779c5abbdec2a9511d5ffbfcd2e53079bf889824b32be170c0d8ef5fc74c"},
     {file = "fastuuid-0.14.0.tar.gz", hash = "sha256:178947fc2f995b38497a74172adee64fdeb8b7ec18f2a5934d037641ba265d26"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [[package]]
 name = "filelock"
@@ -1397,11 +1418,12 @@ version = "3.24.3"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.10"
-groups = ["dev", "full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "dev", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "filelock-3.24.3-py3-none-any.whl", hash = "sha256:426e9a4660391f7f8a810d71b0555bce9008b0a1cc342ab1f6947d37639e002d"},
     {file = "filelock-3.24.3.tar.gz", hash = "sha256:011a5644dc937c22699943ebbfc46e969cdde3e171470a6e40b9533e5a72affa"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [[package]]
 name = "fonttools"
@@ -1409,7 +1431,7 @@ version = "4.61.1"
 description = "Tools to manipulate font files"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "fonttools-4.61.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:7c7db70d57e5e1089a274cbb2b1fd635c9a24de809a231b154965d415d6c6d24"},
     {file = "fonttools-4.61.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5fe9fd43882620017add5eabb781ebfbc6998ee49b35bd7f8f79af1f9f99a958"},
@@ -1462,6 +1484,7 @@ files = [
     {file = "fonttools-4.61.1-py3-none-any.whl", hash = "sha256:17d2bf5d541add43822bcf0c43d7d847b160c9bb01d15d5007d84e2217aaa371"},
     {file = "fonttools-4.61.1.tar.gz", hash = "sha256:6675329885c44657f826ef01d9e4fb33b9158e9d93c537d84ad8399539bc6f69"},
 ]
+markers = {main = "extra == \"eval\" or extra == \"full\" or extra == \"optimization\""}
 
 [package.extras]
 all = ["brotli (>=1.0.1) ; platform_python_implementation == \"CPython\"", "brotlicffi (>=0.8.0) ; platform_python_implementation != \"CPython\"", "lxml (>=4.0)", "lz4 (>=1.7.4.2)", "matplotlib", "munkres ; platform_python_implementation == \"PyPy\"", "pycairo", "scipy ; platform_python_implementation != \"PyPy\"", "skia-pathops (>=0.5.0)", "sympy", "uharfbuzz (>=0.45.0)", "unicodedata2 (>=17.0.0) ; python_version <= \"3.14\"", "xattr ; sys_platform == \"darwin\"", "zopfli (>=0.1.4)"]
@@ -1482,7 +1505,7 @@ version = "1.8.0"
 description = "A list-like structure which implements collections.abc.MutableSequence"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "frozenlist-1.8.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:b37f6d31b3dcea7deb5e9696e529a6aa4a898adc33db82da12e4c60a7c4d2011"},
     {file = "frozenlist-1.8.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ef2b7b394f208233e471abc541cc6991f907ffd47dc72584acee3147899d6565"},
@@ -1615,6 +1638,7 @@ files = [
     {file = "frozenlist-1.8.0-py3-none-any.whl", hash = "sha256:0c18a16eab41e82c295618a77502e17b195883241c563b00f0aa5106fc4eaa0d"},
     {file = "frozenlist-1.8.0.tar.gz", hash = "sha256:3ede829ed8d842f6cd48fc7081d7a41001a56f1f38603f9d49bf3020d59a31ad"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [[package]]
 name = "fsspec"
@@ -1622,11 +1646,12 @@ version = "2025.10.0"
 description = "File-system specification"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "fsspec-2025.10.0-py3-none-any.whl", hash = "sha256:7c7712353ae7d875407f97715f0e1ffcc21e33d5b24556cb1e090ae9409ec61d"},
     {file = "fsspec-2025.10.0.tar.gz", hash = "sha256:b6789427626f068f9a83ca4e8a3cc050850b6c0f71f99ddb4f542b8266a26a59"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 aiohttp = {version = "<4.0.0a0 || >4.0.0a0,<4.0.0a1 || >4.0.0a1", optional = true, markers = "extra == \"http\""}
@@ -1665,11 +1690,12 @@ version = "0.7.2"
 description = "Unicode grapheme helpers"
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "graphemeu-0.7.2-py3-none-any.whl", hash = "sha256:1444520f6899fd30114fc2a39f297d86d10fa0f23bf7579f772f8bc7efaa2542"},
     {file = "graphemeu-0.7.2.tar.gz", hash = "sha256:42bbe373d7c146160f286cd5f76b1a8ad29172d7333ce10705c5cc282462a4f8"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.extras]
 dev = ["pytest"]
@@ -1681,11 +1707,12 @@ version = "0.16.0"
 description = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "h11-0.16.0-py3-none-any.whl", hash = "sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"},
     {file = "h11-0.16.0.tar.gz", hash = "sha256:4e35b956cf45792e4caa5885e69fba00bdbc6ffafbfa020300e549b208ee5ff1"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [[package]]
 name = "hf-xet"
@@ -1693,8 +1720,7 @@ version = "1.3.0"
 description = "Fast transfer of large files with the Hugging Face Hub."
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
-markers = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\""
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "hf_xet-1.3.0-cp313-cp313t-macosx_10_12_x86_64.whl", hash = "sha256:95bdeab4747cb45f855601e39b9e86ae92b4a114978ada6e0401961fcc5d2958"},
     {file = "hf_xet-1.3.0-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:f99992583f27b139392601fe99e88df155dc4de7feba98ed27ce2d3e6b4a65bb"},
@@ -1719,6 +1745,7 @@ files = [
     {file = "hf_xet-1.3.0-cp37-abi3-win_amd64.whl", hash = "sha256:227eee5b99d19b9f20c31d901a0c2373af610a24a34e6c2701072c9de48d6d95"},
     {file = "hf_xet-1.3.0.tar.gz", hash = "sha256:9c154ad63e17aca970987b2cf17dbd8a0c09bb18aeb246f637647a8058e4522b"},
 ]
+markers = {main = "(extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\") and (platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\")", full = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\"", llm = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\"", local = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\"", neural-g2p = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\"", repository = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\""}
 
 [package.extras]
 tests = ["pytest"]
@@ -1729,11 +1756,12 @@ version = "1.0.9"
 description = "A minimal low-level HTTP client."
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "httpcore-1.0.9-py3-none-any.whl", hash = "sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55"},
     {file = "httpcore-1.0.9.tar.gz", hash = "sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 certifi = "*"
@@ -1751,11 +1779,12 @@ version = "0.28.1"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad"},
     {file = "httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 anyio = "*"
@@ -1776,11 +1805,12 @@ version = "1.4.1"
 description = "Client library to download and publish models, datasets and other repos on the huggingface.co hub"
 optional = false
 python-versions = ">=3.9.0"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "huggingface_hub-1.4.1-py3-none-any.whl", hash = "sha256:9931d075fb7a79af5abc487106414ec5fba2c0ae86104c0c62fd6cae38873d18"},
     {file = "huggingface_hub-1.4.1.tar.gz", hash = "sha256:b41131ec35e631e7383ab26d6146b8d8972abc8b6309b963b306fbcca87f5ed5"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 filelock = "*"
@@ -1842,11 +1872,12 @@ version = "8.7.1"
 description = "Read metadata from Python packages"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "importlib_metadata-8.7.1-py3-none-any.whl", hash = "sha256:5a1f80bf1daa489495071efbb095d75a634cf28a8bc299581244063b53176151"},
     {file = "importlib_metadata-8.7.1.tar.gz", hash = "sha256:49fef1ae6440c182052f407c8d34a68f72efc36db9ca90dc0113398f2fdde8bb"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 zipp = ">=3.20"
@@ -1890,11 +1921,12 @@ version = "3.1.6"
 description = "A very fast and expressive template engine."
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "llm", "local", "neural-g2p"]
+groups = ["main", "full", "llm", "local", "neural-g2p"]
 files = [
     {file = "jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"},
     {file = "jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\""}
 
 [package.dependencies]
 MarkupSafe = ">=2.0"
@@ -1908,7 +1940,7 @@ version = "0.13.0"
 description = "Fast iterable JSON parser."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "jiter-0.13.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:2ffc63785fd6c7977defe49b9824ae6ce2b2e2b77ce539bdaf006c26da06342e"},
     {file = "jiter-0.13.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:4a638816427006c1e3f0013eb66d391d7a3acda99a7b0cf091eff4497ccea33a"},
@@ -2013,6 +2045,7 @@ files = [
     {file = "jiter-0.13.0-graalpy312-graalpy250_312_native-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7bb00b6d26db67a05fe3e12c76edc75f32077fb51deed13822dc648fa373bc19"},
     {file = "jiter-0.13.0.tar.gz", hash = "sha256:f2839f9c2c7e2dffc1bc5929a510e14ce0a946be9365fd1219e7ef342dae14f4"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [[package]]
 name = "joblib"
@@ -2069,7 +2102,7 @@ version = "1.4.9"
 description = "A fast implementation of the Cassowary constraint solver"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "kiwisolver-1.4.9-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:b4b4d74bda2b8ebf4da5bd42af11d02d04428b2c32846e4c2c93219df8a7987b"},
     {file = "kiwisolver-1.4.9-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:fb3b8132019ea572f4611d770991000d7f58127560c4889729248eb5852a102f"},
@@ -2173,6 +2206,7 @@ files = [
     {file = "kiwisolver-1.4.9-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:fb940820c63a9590d31d88b815e7a3aa5915cad3ce735ab45f0c730b39547de1"},
     {file = "kiwisolver-1.4.9.tar.gz", hash = "sha256:c3b22c26c6fd6811b0ae8363b95ca8ce4ea3c202d3d0975b2914310ceb1bcc4d"},
 ]
+markers = {main = "extra == \"eval\" or extra == \"full\" or extra == \"optimization\""}
 
 [[package]]
 name = "language-tags"
@@ -2293,11 +2327,12 @@ version = "1.81.15"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "<4.0,>=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "litellm-1.81.15-py3-none-any.whl", hash = "sha256:2fa253658702509ce09fe0e172e5a47baaadf697fb0f784c7fd4ff665ae76ae1"},
     {file = "litellm-1.81.15.tar.gz", hash = "sha256:a8a6277a53280762051c5818ebc76dd5f036368b9426c6f21795ae7f1ac6ebdc"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 aiohttp = ">=3.10"
@@ -2329,11 +2364,12 @@ version = "4.0.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147"},
     {file = "markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 mdurl = ">=0.1,<1.0"
@@ -2353,7 +2389,7 @@ version = "3.0.3"
 description = "Safely add untrusted strings to HTML/XML markup."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "neural-g2p"]
+groups = ["main", "full", "llm", "local", "neural-g2p"]
 files = [
     {file = "markupsafe-3.0.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2f981d352f04553a7171b8e44369f2af4055f888dfb147d55e42d29e29e74559"},
     {file = "markupsafe-3.0.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e1c1493fb6e50ab01d20a22826e57520f1284df32f2d8601fdd90b6304601419"},
@@ -2445,6 +2481,7 @@ files = [
     {file = "markupsafe-3.0.3-cp39-cp39-win_arm64.whl", hash = "sha256:38664109c14ffc9e7437e86b4dceb442b0096dfe3541d7864d9cbe1da4cf36c8"},
     {file = "markupsafe-3.0.3.tar.gz", hash = "sha256:722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\""}
 
 [[package]]
 name = "matplotlib"
@@ -2452,7 +2489,7 @@ version = "3.10.8"
 description = "Python plotting package"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "matplotlib-3.10.8-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:00270d217d6b20d14b584c521f810d60c5c78406dc289859776550df837dcda7"},
     {file = "matplotlib-3.10.8-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:37b3c1cc42aa184b3f738cfa18c1c1d72fd496d85467a6cf7b807936d39aa656"},
@@ -2510,6 +2547,7 @@ files = [
     {file = "matplotlib-3.10.8-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ae029229a57cd1e8fe542485f27e7ca7b23aa9e8944ddb4985d0bc444f1eca2"},
     {file = "matplotlib-3.10.8.tar.gz", hash = "sha256:2299372c19d56bcd35cf05a2738308758d32b9eaed2371898d8f5bd33f084aa3"},
 ]
+markers = {main = "extra == \"eval\" or extra == \"full\" or extra == \"optimization\""}
 
 [package.dependencies]
 contourpy = ">=1.0.1"
@@ -2531,11 +2569,12 @@ version = "0.1.2"
 description = "Markdown URL utilities"
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [[package]]
 name = "moocore"
@@ -2543,7 +2582,7 @@ version = "0.2.0"
 description = "Core Algorithms for Multi-Objective Optimization"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "moocore-0.2.0-cp310-abi3-macosx_10_9_universal2.whl", hash = "sha256:653449231f328d3c9e69693ec3d44e8c77f38ab7e9ef0c69dd9ded40449e980d"},
     {file = "moocore-0.2.0-cp310-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cf8f091a7304532ed605acd82acd051e89af22ece8e2a27a3cee0faf9f2ea185"},
@@ -2554,6 +2593,7 @@ files = [
     {file = "moocore-0.2.0-cp310-abi3-win_arm64.whl", hash = "sha256:a7683feddfd2a47b4a0f89ee8d370cae72331792f68e67f083ccb37bb2f1c8cf"},
     {file = "moocore-0.2.0.tar.gz", hash = "sha256:3dc601f85f9a4743ed50ddd027dca30e3bb55c899916a092c2ece495b1b2de08"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 cffi = ">=1.17.1"
@@ -2573,11 +2613,12 @@ version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
 optional = false
 python-versions = "*"
-groups = ["full", "local", "neural-g2p"]
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "mpmath-1.3.0-py3-none-any.whl", hash = "sha256:a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"},
     {file = "mpmath-1.3.0.tar.gz", hash = "sha256:7a28eb2a9774d00c7bc92411c19a89209d5da7c4c9a9e227be8330a23a25b91f"},
 ]
+markers = {main = "extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\""}
 
 [package.extras]
 develop = ["codecov", "pycodestyle", "pytest (>=4.6)", "pytest-cov", "wheel"]
@@ -2591,7 +2632,7 @@ version = "6.7.1"
 description = "multidict implementation"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "multidict-6.7.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:c93c3db7ea657dd4637d57e74ab73de31bccefe144d3d4ce370052035bc85fb5"},
     {file = "multidict-6.7.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:974e72a2474600827abaeda71af0c53d9ebbc3c2eb7da37b37d7829ae31232d8"},
@@ -2740,6 +2781,7 @@ files = [
     {file = "multidict-6.7.1-py3-none-any.whl", hash = "sha256:55d97cc6dae627efa6a6e548885712d4864b81110ac76fa4e534c03819fa4a56"},
     {file = "multidict-6.7.1.tar.gz", hash = "sha256:ec6652a1bee61c53a3e5776b6049172c53b6aaba34f18c9ad04f82712bac623d"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [package.dependencies]
 typing-extensions = {version = ">=4.1.0", markers = "python_version < \"3.11\""}
@@ -2750,7 +2792,7 @@ version = "0.70.18"
 description = "better multiprocessing and multithreading in Python"
 optional = false
 python-versions = ">=3.8"
-groups = ["full", "local", "repository"]
+groups = ["main", "full", "repository"]
 files = [
     {file = "multiprocess-0.70.18-pp310-pypy310_pp73-macosx_10_15_x86_64.whl", hash = "sha256:25d4012dcaaf66b9e8e955f58482b42910c2ee526d532844d8bcf661bbc604df"},
     {file = "multiprocess-0.70.18-pp310-pypy310_pp73-macosx_11_0_arm64.whl", hash = "sha256:06b19433de0d02afe5869aec8931dd5c01d99074664f806c73896b0d9e527213"},
@@ -2772,6 +2814,7 @@ files = [
     {file = "multiprocess-0.70.18-py39-none-any.whl", hash = "sha256:e78ca805a72b1b810c690b6b4cc32579eba34f403094bbbae962b7b5bf9dfcb8"},
     {file = "multiprocess-0.70.18.tar.gz", hash = "sha256:f9597128e6b3e67b23956da07cf3d2e5cba79e2f4e0fba8d7903636663ec6d0d"},
 ]
+markers = {main = "extra == \"repository\" or extra == \"full\""}
 
 [package.dependencies]
 dill = ">=0.4.0"
@@ -2868,12 +2911,12 @@ version = "3.4.2"
 description = "Python package for creating and manipulating graphs and networks"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "local", "neural-g2p"]
-markers = "python_version == \"3.10\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "networkx-3.4.2-py3-none-any.whl", hash = "sha256:df5d4365b724cf81b8c6a7312509d0c22386097011ad1abe274afd5e9d3bbc5f"},
     {file = "networkx-3.4.2.tar.gz", hash = "sha256:307c3669428c5362aab27c8a1260aa8f47c4e91d3891f48be0141738d8d053e1"},
 ]
+markers = {main = "python_version == \"3.10\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "python_version == \"3.10\"", local = "python_version == \"3.10\"", neural-g2p = "python_version == \"3.10\""}
 
 [package.extras]
 default = ["matplotlib (>=3.7)", "numpy (>=1.24)", "pandas (>=2.0)", "scipy (>=1.10,!=1.11.0,!=1.11.1)"]
@@ -2889,12 +2932,12 @@ version = "3.6.1"
 description = "Python package for creating and manipulating graphs and networks"
 optional = false
 python-versions = "!=3.14.1,>=3.11"
-groups = ["full", "local", "neural-g2p"]
-markers = "python_version >= \"3.11\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"},
     {file = "networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509"},
 ]
+markers = {main = "python_version >= \"3.11\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "python_version >= \"3.11\"", local = "python_version >= \"3.11\"", neural-g2p = "python_version >= \"3.11\""}
 
 [package.extras]
 benchmarking = ["asv", "virtualenv"]
@@ -3074,13 +3117,13 @@ version = "12.8.4.1"
 description = "CUBLAS native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:b86f6dd8935884615a0683b663891d43781b819ac4f2ba2b0c9604676af346d0"},
     {file = "nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142"},
     {file = "nvidia_cublas_cu12-12.8.4.1-py3-none-win_amd64.whl", hash = "sha256:47e9b82132fa8d2b4944e708049229601448aaad7e6f296f630f2d1a32de35af"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-cuda-cupti-cu12"
@@ -3088,13 +3131,13 @@ version = "12.8.90"
 description = "CUDA profiling tools runtime libs."
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:4412396548808ddfed3f17a467b104ba7751e6b58678a4b840675c56d21cf7ed"},
     {file = "nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182"},
     {file = "nvidia_cuda_cupti_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:bb479dcdf7e6d4f8b0b01b115260399bf34154a1a2e9fe11c85c517d87efd98e"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-cuda-nvrtc-cu12"
@@ -3102,13 +3145,13 @@ version = "12.8.93"
 description = "NVRTC native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994"},
     {file = "nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fc1fec1e1637854b4c0a65fb9a8346b51dd9ee69e61ebaccc82058441f15bce8"},
     {file = "nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:7a4b6b2904850fe78e0bd179c4b655c404d4bb799ef03ddc60804247099ae909"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-cuda-runtime-cu12"
@@ -3116,13 +3159,13 @@ version = "12.8.90"
 description = "CUDA Runtime native Libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:52bf7bbee900262ffefe5e9d5a2a69a30d97e2bc5bb6cc866688caa976966e3d"},
     {file = "nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90"},
     {file = "nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:c0c6027f01505bfed6c3b21ec546f69c687689aad5f1a377554bc6ca4aa993a8"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-cudnn-cu12"
@@ -3130,13 +3173,13 @@ version = "9.10.2.21"
 description = "cuDNN runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8"},
     {file = "nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8"},
     {file = "nvidia_cudnn_cu12-9.10.2.21-py3-none-win_amd64.whl", hash = "sha256:c6288de7d63e6cf62988f0923f96dc339cea362decb1bf5b3141883392a7d65e"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 nvidia-cublas-cu12 = "*"
@@ -3147,13 +3190,13 @@ version = "11.3.3.83"
 description = "CUFFT native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a"},
     {file = "nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74"},
     {file = "nvidia_cufft_cu12-11.3.3.83-py3-none-win_amd64.whl", hash = "sha256:7a64a98ef2a7c47f905aaf8931b69a3a43f27c55530c698bb2ed7c75c0b42cb7"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 nvidia-nvjitlink-cu12 = "*"
@@ -3164,12 +3207,12 @@ version = "1.13.1.3"
 description = "cuFile GPUDirect libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc"},
     {file = "nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:4beb6d4cce47c1a0f1013d72e02b0994730359e17801d395bdcbf20cfb3bb00a"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-curand-cu12"
@@ -3177,13 +3220,13 @@ version = "10.3.9.90"
 description = "CURAND native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:dfab99248034673b779bc6decafdc3404a8a6f502462201f2f31f11354204acd"},
     {file = "nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9"},
     {file = "nvidia_curand_cu12-10.3.9.90-py3-none-win_amd64.whl", hash = "sha256:f149a8ca457277da854f89cf282d6ef43176861926c7ac85b2a0fbd237c587ec"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-cusolver-cu12"
@@ -3191,13 +3234,13 @@ version = "11.7.3.90"
 description = "CUDA solver native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0"},
     {file = "nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450"},
     {file = "nvidia_cusolver_cu12-11.7.3.90-py3-none-win_amd64.whl", hash = "sha256:4a550db115fcabc4d495eb7d39ac8b58d4ab5d8e63274d3754df1c0ad6a22d34"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 nvidia-cublas-cu12 = "*"
@@ -3210,13 +3253,13 @@ version = "12.5.8.93"
 description = "CUSPARSE native runtime libraries"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc"},
     {file = "nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b"},
     {file = "nvidia_cusparse_cu12-12.5.8.93-py3-none-win_amd64.whl", hash = "sha256:9a33604331cb2cac199f2e7f5104dfbb8a5a898c367a53dfda9ff2acb6b6b4dd"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.dependencies]
 nvidia-nvjitlink-cu12 = "*"
@@ -3227,13 +3270,13 @@ version = "0.7.1"
 description = "NVIDIA cuSPARSELt"
 optional = false
 python-versions = "*"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:8878dce784d0fac90131b6817b607e803c36e629ba34dc5b433471382196b6a5"},
     {file = "nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623"},
     {file = "nvidia_cusparselt_cu12-0.7.1-py3-none-win_amd64.whl", hash = "sha256:f67fbb5831940ec829c9117b7f33807db9f9678dc2a617fbe781cac17b4e1075"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-nccl-cu12"
@@ -3241,12 +3284,12 @@ version = "2.27.5"
 description = "NVIDIA Collective Communication Library (NCCL) Runtime"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:31432ad4d1fb1004eb0c56203dc9bc2178a1ba69d1d9e02d64a6938ab5e40e7a"},
     {file = "nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-nvjitlink-cu12"
@@ -3254,13 +3297,13 @@ version = "12.8.93"
 description = "Nvidia JIT LTO Library"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88"},
     {file = "nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:adccd7161ace7261e01bb91e44e88da350895c270d23f744f0820c818b7229e7"},
     {file = "nvidia_nvjitlink_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:bd93fbeeee850917903583587f4fc3a4eafa022e34572251368238ab5e6bd67f"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-nvshmem-cu12"
@@ -3268,12 +3311,12 @@ version = "3.4.5"
 description = "NVSHMEM creates a global address space that provides efficient and scalable communication for NVIDIA GPU clusters."
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0b48363fc6964dede448029434c6abed6c5e37f823cb43c3bcde7ecfc0457e15"},
     {file = "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "nvidia-nvtx-cu12"
@@ -3281,13 +3324,13 @@ version = "12.8.90"
 description = "NVIDIA Tools Extension"
 optional = false
 python-versions = ">=3"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d7ad891da111ebafbf7e015d34879f7112832fc239ff0d7d776b6cb685274615"},
     {file = "nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f"},
     {file = "nvidia_nvtx_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:619c8304aedc69f02ea82dd244541a83c3d9d40993381b3b590f1adaed3db41e"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [[package]]
 name = "openai"
@@ -3295,11 +3338,12 @@ version = "2.24.0"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "openai-2.24.0-py3-none-any.whl", hash = "sha256:fed30480d7d6c884303287bde864980a4b137b60553ffbcf9ab4a233b7a73d94"},
     {file = "openai-2.24.0.tar.gz", hash = "sha256:1e5769f540dbd01cb33bc4716a23e67b9d695161a734aff9c5f925e2bf99a673"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 anyio = ">=3.5.0,<5"
@@ -3323,11 +3367,12 @@ version = "26.0"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.8"
-groups = ["dev", "eval", "full", "llm", "local", "neural-g2p", "optimization", "repository"]
+groups = ["main", "dev", "eval", "full", "llm", "local", "neural-g2p", "optimization", "repository"]
 files = [
     {file = "packaging-26.0-py3-none-any.whl", hash = "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529"},
     {file = "packaging-26.0.tar.gz", hash = "sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\" or extra == \"eval\" or extra == \"optimization\""}
 
 [[package]]
 name = "pandas"
@@ -3335,7 +3380,7 @@ version = "2.3.3"
 description = "Powerful data structures for data analysis, time series, and statistics"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "full", "local", "repository"]
+groups = ["main", "full", "repository"]
 markers = "python_version == \"3.10\""
 files = [
     {file = "pandas-2.3.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:376c6446ae31770764215a6c937f72d917f214b43560603cd60da6408f183b6c"},
@@ -3432,7 +3477,7 @@ version = "3.0.1"
 description = "Powerful data structures for data analysis, time series, and statistics"
 optional = false
 python-versions = ">=3.11"
-groups = ["main", "full", "local", "repository"]
+groups = ["main", "full", "repository"]
 markers = "python_version >= \"3.11\""
 files = [
     {file = "pandas-3.0.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:de09668c1bf3b925c07e5762291602f0d789eca1b3a781f99c1c78f6cac0e7ea"},
@@ -3562,11 +3607,12 @@ version = "0.18.1"
 description = "Parameter-Efficient Fine-Tuning (PEFT)"
 optional = false
 python-versions = ">=3.10.0"
-groups = ["full", "local"]
+groups = ["main", "full", "local"]
 files = [
     {file = "peft-0.18.1-py3-none-any.whl", hash = "sha256:0bf06847a3551e3019fc58c440cffc9a6b73e6e2962c95b52e224f77bbdb50f1"},
     {file = "peft-0.18.1.tar.gz", hash = "sha256:2dd0d6bfce936d1850e48aaddbd250941c5c02fc8ef3237cd8fd5aac35e0bae2"},
 ]
+markers = {main = "extra == \"local\" or extra == \"full\""}
 
 [package.dependencies]
 accelerate = ">=0.21.0"
@@ -3615,7 +3661,7 @@ version = "12.1.1"
 description = "Python Imaging Library (fork)"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "pillow-12.1.1-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:1f1625b72740fdda5d77b4def688eb8fd6490975d06b909fd19f13f391e077e0"},
     {file = "pillow-12.1.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:178aa072084bd88ec759052feca8e56cbb14a60b39322b99a049e58090479713"},
@@ -3709,6 +3755,7 @@ files = [
     {file = "pillow-12.1.1-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:cb9bb857b2d057c6dfc72ac5f3b44836924ba15721882ef103cecb40d002d80e"},
     {file = "pillow-12.1.1.tar.gz", hash = "sha256:9ad8fa5937ab05218e2b6a4cff30295ad35afd2f83ac592e68c0d871bb0fdbc4"},
 ]
+markers = {main = "extra == \"eval\" or extra == \"full\" or extra == \"optimization\""}
 
 [package.extras]
 docs = ["furo", "olefile", "sphinx (>=8.2)", "sphinx-autobuild", "sphinx-copybutton", "sphinx-inline-tabs", "sphinxext-opengraph"]
@@ -3724,11 +3771,12 @@ version = "4.9.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.10"
-groups = ["dev", "full", "optimization"]
+groups = ["main", "dev", "full", "optimization"]
 files = [
     {file = "platformdirs-4.9.2-py3-none-any.whl", hash = "sha256:9170634f126f8efdae22fb58ae8a0eaa86f38365bc57897a6c4f781d1f5875bd"},
     {file = "platformdirs-4.9.2.tar.gz", hash = "sha256:9a33809944b9db043ad67ca0db94b14bf452cc6aeaac46a88ea55b26e2e9d291"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [[package]]
 name = "pluggy"
@@ -3771,7 +3819,7 @@ version = "0.4.1"
 description = "Accelerated property cache"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "propcache-0.4.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:7c2d1fa3201efaf55d730400d945b5b3ab6e672e100ba0f9a409d950ab25d7db"},
     {file = "propcache-0.4.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:1eb2994229cc8ce7fe9b3db88f5465f5fd8651672840b2e426b88cdb1a30aac8"},
@@ -3896,6 +3944,7 @@ files = [
     {file = "propcache-0.4.1-py3-none-any.whl", hash = "sha256:af2a6052aeb6cf17d3e46ee169099044fd8224cbaf75c76a2ef596e8163e2237"},
     {file = "propcache-0.4.1.tar.gz", hash = "sha256:f48107a8c637e80362555f37ecf49abe20370e557cc4ab374f04ec4423c97c3d"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [[package]]
 name = "psutil"
@@ -3903,7 +3952,7 @@ version = "7.2.2"
 description = "Cross-platform lib for process and system monitoring."
 optional = false
 python-versions = ">=3.6"
-groups = ["full", "local"]
+groups = ["main", "full", "local"]
 files = [
     {file = "psutil-7.2.2-cp313-cp313t-macosx_10_13_x86_64.whl", hash = "sha256:2edccc433cbfa046b980b0df0171cd25bcaeb3a68fe9022db0979e7aa74a826b"},
     {file = "psutil-7.2.2-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:e78c8603dcd9a04c7364f1a3e670cea95d51ee865e4efb3556a3a63adef958ea"},
@@ -3927,6 +3976,7 @@ files = [
     {file = "psutil-7.2.2-cp37-abi3-win_arm64.whl", hash = "sha256:8c233660f575a5a89e6d4cb65d9f938126312bca76d8fe087b947b3a1aaac9ee"},
     {file = "psutil-7.2.2.tar.gz", hash = "sha256:0746f5f8d406af344fd547f1c8daa5f5c33dbc293bb8d6a16d80b4bb88f59372"},
 ]
+markers = {main = "extra == \"local\" or extra == \"full\""}
 
 [package.extras]
 dev = ["abi3audit", "black", "check-manifest", "colorama ; os_name == \"nt\"", "coverage", "packaging", "psleak", "pylint", "pyperf", "pypinfo", "pyreadline3 ; os_name == \"nt\"", "pytest", "pytest-cov", "pytest-instafail", "pytest-xdist", "pywin32 ; os_name == \"nt\" and implementation_name != \"pypy\"", "requests", "rstcheck", "ruff", "setuptools", "sphinx", "sphinx_rtd_theme", "toml-sort", "twine", "validate-pyproject[all]", "virtualenv", "vulture", "wheel", "wheel ; os_name == \"nt\" and implementation_name != \"pypy\"", "wmi ; os_name == \"nt\" and implementation_name != \"pypy\""]
@@ -3938,11 +3988,12 @@ version = "3.3.0"
 description = "PuLP is an LP modeler written in python. PuLP can generate MPS or LP files and call GLPK, COIN CLP/CBC, CPLEX, and GUROBI to solve linear problems."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "pulp-3.3.0-py3-none-any.whl", hash = "sha256:dd6ad2d63f196d1254eddf9dcff5cd224912c1f046120cb7c143c5b0eda63fae"},
     {file = "pulp-3.3.0.tar.gz", hash = "sha256:7eb99b9ce7beeb8bbb7ea9d1c919f02f003ab7867e0d1e322f2f2c26dd31c8ba"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.extras]
 copt = ["coptpy"]
@@ -3961,7 +4012,7 @@ version = "23.0.1"
 description = "Python library for Apache Arrow"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "local", "repository"]
+groups = ["main", "full", "repository"]
 files = [
     {file = "pyarrow-23.0.1-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:3fab8f82571844eb3c460f90a75583801d14ca0cc32b1acc8c361650e006fd56"},
     {file = "pyarrow-23.0.1-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:3f91c038b95f71ddfc865f11d5876c42f343b4495535bd262c7b321b0b94507c"},
@@ -4014,6 +4065,7 @@ files = [
     {file = "pyarrow-23.0.1-cp314-cp314t-win_amd64.whl", hash = "sha256:527e8d899f14bd15b740cd5a54ad56b7f98044955373a17179d5956ddb93d9ce"},
     {file = "pyarrow-23.0.1.tar.gz", hash = "sha256:b8c5873e33440b2bc2f4a79d2b47017a89c5a24116c055625e6f2ee50523f019"},
 ]
+markers = {main = "extra == \"repository\" or extra == \"full\""}
 
 [[package]]
 name = "pycparser"
@@ -4021,12 +4073,12 @@ version = "3.0"
 description = "C parser in Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "optimization"]
-markers = "implementation_name != \"PyPy\""
+groups = ["main", "full", "optimization"]
 files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
+markers = {main = "(extra == \"optimization\" or extra == \"full\") and implementation_name != \"PyPy\"", full = "implementation_name != \"PyPy\"", optimization = "implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -4034,11 +4086,12 @@ version = "2.12.5"
 description = "Data validation using Python type hints"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "pydantic-2.12.5-py3-none-any.whl", hash = "sha256:e561593fccf61e8a20fc46dfc2dfe075b8be7d0188df33f221ad1f0139180f9d"},
     {file = "pydantic-2.12.5.tar.gz", hash = "sha256:4d351024c75c0f085a9febbb665ce8c0c6ec5d30e903bdb6394b7ede26aebb49"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 annotated-types = ">=0.6.0"
@@ -4056,7 +4109,7 @@ version = "2.41.5"
 description = "Core functionality for Pydantic validation and serialization"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "pydantic_core-2.41.5-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:77b63866ca88d804225eaa4af3e664c5faf3568cea95360d21f4725ab6e07146"},
     {file = "pydantic_core-2.41.5-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:dfa8a0c812ac681395907e71e1274819dec685fec28273a28905df579ef137e2"},
@@ -4180,6 +4233,7 @@ files = [
     {file = "pydantic_core-2.41.5-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:56121965f7a4dc965bff783d70b907ddf3d57f6eba29b6d2e5dabfaf07799c51"},
     {file = "pydantic_core-2.41.5.tar.gz", hash = "sha256:08daa51ea16ad373ffd5e7606252cc32f07bc72b28284b6bc9c6df804816476e"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 typing-extensions = ">=4.14.1"
@@ -4190,11 +4244,12 @@ version = "2.19.2"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.8"
-groups = ["dev", "full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "dev", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b"},
     {file = "pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.extras]
 windows-terminal = ["colorama (>=0.4.6)"]
@@ -4205,7 +4260,7 @@ version = "0.6.1.6"
 description = "Multi-Objective Optimization in Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "pymoo-0.6.1.6-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:f2d48fa7f8f8ea314405ad49a6b7f3dcf8f12c2024e319e2d47ede0937f8b39b"},
     {file = "pymoo-0.6.1.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:c8cfd085b74b3f673378109d8d0734d0cab460e3e78c09f691120ac0c2698aad"},
@@ -4244,6 +4299,7 @@ files = [
     {file = "pymoo-0.6.1.6-cp314-cp314-win_amd64.whl", hash = "sha256:56ecb6f9f5ac0559829e183a23ea3672eae8c1eb9d745305bef98da8d1614d28"},
     {file = "pymoo-0.6.1.6.tar.gz", hash = "sha256:d48077c7b612b149e7db5351459bf96a0950e84ebcd5b7b953bf46b3dcf1ac28"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.dependencies]
 alive_progress = "*"
@@ -4326,7 +4382,7 @@ version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-groups = ["main", "eval", "full", "local", "optimization", "repository"]
+groups = ["main", "eval", "full", "optimization", "repository"]
 files = [
     {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
     {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
@@ -4341,11 +4397,12 @@ version = "1.2.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61"},
     {file = "python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.extras]
 cli = ["click (>=5.0)"]
@@ -4356,7 +4413,7 @@ version = "2025.2"
 description = "World timezone definitions, modern and historical"
 optional = false
 python-versions = "*"
-groups = ["main", "full", "local", "repository"]
+groups = ["main", "full", "repository"]
 markers = "python_version == \"3.10\""
 files = [
     {file = "pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00"},
@@ -4618,7 +4675,7 @@ version = "2.32.5"
 description = "Python HTTP for Humans."
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "requests-2.32.5-py3-none-any.whl", hash = "sha256:2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6"},
     {file = "requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf"},
@@ -4655,11 +4712,12 @@ version = "14.3.3"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 optional = false
 python-versions = ">=3.8.0"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "rich-14.3.3-py3-none-any.whl", hash = "sha256:793431c1f8619afa7d3b52b2cdec859562b950ea0d4b6b505397612db8d5362d"},
     {file = "rich-14.3.3.tar.gz", hash = "sha256:b8daa0b9e4eef54dd8cf7c86c03713f53241884e814f4e2f5fb342fe520f639b"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 markdown-it-py = ">=2.2.0"
@@ -4827,7 +4885,7 @@ version = "0.7.0"
 description = ""
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "local", "neural-g2p"]
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "safetensors-0.7.0-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:c82f4d474cf725255d9e6acf17252991c3c8aac038d6ef363a4bf8be2f6db517"},
     {file = "safetensors-0.7.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:94fd4858284736bb67a897a41608b5b0c2496c9bdb3bf2af1fa3409127f20d57"},
@@ -4853,6 +4911,7 @@ files = [
     {file = "safetensors-0.7.0-pp39-pypy39_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:6999421eb8ba9df4450a16d9184fcb7bef26240b9f98e95401f17af6c2210b71"},
     {file = "safetensors-0.7.0.tar.gz", hash = "sha256:07663963b67e8bd9f0b8ad15bb9163606cd27cc5a1b96235a50d8369803b96b0"},
 ]
+markers = {main = "extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\""}
 
 [package.extras]
 all = ["safetensors[jax]", "safetensors[numpy]", "safetensors[paddlepaddle]", "safetensors[pinned-tf]", "safetensors[quality]", "safetensors[testing]", "safetensors[torch]"]
@@ -4874,8 +4933,7 @@ version = "1.15.3"
 description = "Fundamental algorithms for scientific computing in Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["eval", "full", "optimization"]
-markers = "python_version == \"3.10\""
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "scipy-1.15.3-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:a345928c86d535060c9c2b25e71e87c39ab2f22fc96e9636bd74d1dbf9de448c"},
     {file = "scipy-1.15.3-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:ad3432cb0f9ed87477a8d97f03b763fd1d57709f1bbde3c9369b1dff5503b253"},
@@ -4924,6 +4982,7 @@ files = [
     {file = "scipy-1.15.3-cp313-cp313t-win_amd64.whl", hash = "sha256:76ad1fb5f8752eabf0fa02e4cc0336b4e8f021e2d5f061ed37d6d264db35e3ca"},
     {file = "scipy-1.15.3.tar.gz", hash = "sha256:eae3cf522bc7df64b42cad3925c876e1b0b6c35c1337c93e12c0f366f55b0eaf"},
 ]
+markers = {main = "python_version == \"3.10\" and (extra == \"eval\" or extra == \"full\" or extra == \"optimization\")", eval = "python_version == \"3.10\"", full = "python_version == \"3.10\"", optimization = "python_version == \"3.10\""}
 
 [package.dependencies]
 numpy = ">=1.23.5,<2.5"
@@ -4939,8 +4998,7 @@ version = "1.17.1"
 description = "Fundamental algorithms for scientific computing in Python"
 optional = false
 python-versions = ">=3.11"
-groups = ["eval", "full", "optimization"]
-markers = "python_version >= \"3.11\""
+groups = ["main", "eval", "full", "optimization"]
 files = [
     {file = "scipy-1.17.1-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:1f95b894f13729334fb990162e911c9e5dc1ab390c58aa6cbecb389c5b5e28ec"},
     {file = "scipy-1.17.1-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:e18f12c6b0bc5a592ed23d3f7b891f68fd7f8241d69b7883769eb5d5dfb52696"},
@@ -5004,6 +5062,7 @@ files = [
     {file = "scipy-1.17.1-cp314-cp314t-win_arm64.whl", hash = "sha256:200e1050faffacc162be6a486a984a0497866ec54149a01270adc8a59b7c7d21"},
     {file = "scipy-1.17.1.tar.gz", hash = "sha256:95d8e012d8cb8816c226aef832200b1d45109ed4464303e997c5b13122b297c0"},
 ]
+markers = {main = "python_version >= \"3.11\" and (extra == \"eval\" or extra == \"full\" or extra == \"optimization\")", eval = "python_version >= \"3.11\"", full = "python_version >= \"3.11\"", optimization = "python_version >= \"3.11\""}
 
 [package.dependencies]
 numpy = ">=1.26.4,<2.7"
@@ -5061,11 +5120,12 @@ version = "1.5.4"
 description = "Tool to Detect Surrounding Shell"
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [[package]]
 name = "six"
@@ -5073,7 +5133,7 @@ version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-groups = ["main", "eval", "full", "local", "optimization", "repository"]
+groups = ["main", "eval", "full", "optimization", "repository"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
     {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
@@ -5085,11 +5145,12 @@ version = "1.3.1"
 description = "Sniff out which async library your code is running under"
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [[package]]
 name = "sympy"
@@ -5097,11 +5158,12 @@ version = "1.14.0"
 description = "Computer algebra system (CAS) in Python"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "local", "neural-g2p"]
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"},
     {file = "sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517"},
 ]
+markers = {main = "extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\""}
 
 [package.dependencies]
 mpmath = ">=1.1.0,<1.4"
@@ -5130,7 +5192,7 @@ version = "0.12.0"
 description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "tiktoken-0.12.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:3de02f5a491cfd179aec916eddb70331814bd6bf764075d39e21d5862e533970"},
     {file = "tiktoken-0.12.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b6cfb6d9b7b54d20af21a912bfe63a2727d9cfa8fbda642fd8322c70340aad16"},
@@ -5190,6 +5252,7 @@ files = [
     {file = "tiktoken-0.12.0-cp39-cp39-win_amd64.whl", hash = "sha256:2cff3688ba3c639ebe816f8d58ffbbb0aa7433e23e08ab1cade5d175fc973fb3"},
     {file = "tiktoken-0.12.0.tar.gz", hash = "sha256:b18ba7ee2b093863978fcb14f74b3707cdc8d4d4d3836853ce7ec60772139931"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 regex = ">=2022.1.18"
@@ -5204,7 +5267,7 @@ version = "0.22.2"
 description = ""
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "neural-g2p"]
+groups = ["main", "full", "llm", "local", "neural-g2p"]
 files = [
     {file = "tokenizers-0.22.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:544dd704ae7238755d790de45ba8da072e9af3eea688f698b137915ae959281c"},
     {file = "tokenizers-0.22.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:1e418a55456beedca4621dbab65a318981467a2b188e982a23e117f115ce5001"},
@@ -5231,6 +5294,7 @@ files = [
     {file = "tokenizers-0.22.2-pp39-pypy39_pp73-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:143b999bdc46d10febb15cbffb4207ddd1f410e2c755857b5a0797961bbdc113"},
     {file = "tokenizers-0.22.2.tar.gz", hash = "sha256:473b83b915e547aa366d1eee11806deaf419e17be16310ac0a14077f1e28f917"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\""}
 
 [package.dependencies]
 huggingface-hub = ">=0.16.4,<2.0"
@@ -5304,7 +5368,7 @@ version = "2.10.0"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "local", "neural-g2p"]
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "torch-2.10.0-2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:2b980edd8d7c0a68c4e951ee1856334a43193f98730d97408fbd148c1a933313"},
     {file = "torch-2.10.0-2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:418997cb02d0a0f1497cf6a09f63166f9f5df9f3e16c8a716ab76a72127c714f"},
@@ -5339,6 +5403,7 @@ files = [
     {file = "torch-2.10.0-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:d8f5912ba938233f86361e891789595ff35ca4b4e2ac8fe3670895e5976731d6"},
     {file = "torch-2.10.0-cp314-cp314t-win_amd64.whl", hash = "sha256:71283a373f0ee2c89e0f0d5f446039bdabe8dbc3c9ccf35f0f784908b0acd185"},
 ]
+markers = {main = "extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\""}
 
 [package.dependencies]
 cuda-bindings = {version = "12.9.4", markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
@@ -5399,11 +5464,12 @@ version = "5.2.0"
 description = "Transformers: the model-definition framework for state-of-the-art machine learning models in text, vision, audio, and multimodal models, for both inference and training."
 optional = false
 python-versions = ">=3.10.0"
-groups = ["full", "local", "neural-g2p"]
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "transformers-5.2.0-py3-none-any.whl", hash = "sha256:9ecaf243dc45bee11a7d93f8caf03746accc0cb069181bbf4ad8566c53e854b4"},
     {file = "transformers-5.2.0.tar.gz", hash = "sha256:0088b8b46ccc9eff1a1dca72b5d618a5ee3b1befc3e418c9512b35dea9f9a650"},
 ]
+markers = {main = "extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\""}
 
 [package.dependencies]
 huggingface-hub = ">=1.3.0,<2.0"
@@ -5453,8 +5519,7 @@ version = "3.6.0"
 description = "A language and compiler for custom Deep Learning operations"
 optional = false
 python-versions = "<3.15,>=3.10"
-groups = ["full", "local", "neural-g2p"]
-markers = "platform_system == \"Linux\" and platform_machine == \"x86_64\""
+groups = ["main", "full", "local", "neural-g2p"]
 files = [
     {file = "triton-3.6.0-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:6c723cfb12f6842a0ae94ac307dba7e7a44741d720a40cf0e270ed4a4e3be781"},
     {file = "triton-3.6.0-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a6550fae429e0667e397e5de64b332d1e5695b73650ee75a6146e2e902770bea"},
@@ -5471,6 +5536,7 @@ files = [
     {file = "triton-3.6.0-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0b3a97e8ed304dfa9bd23bb41ca04cdf6b2e617d5e782a8653d616037a5d537d"},
     {file = "triton-3.6.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:46bd1c1af4b6704e554cad2eeb3b0a6513a980d470ccfa63189737340c7746a7"},
 ]
+markers = {main = "platform_system == \"Linux\" and platform_machine == \"x86_64\" and (extra == \"local\" or extra == \"neural-g2p\" or extra == \"full\")", full = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", local = "platform_system == \"Linux\" and platform_machine == \"x86_64\"", neural-g2p = "platform_system == \"Linux\" and platform_machine == \"x86_64\""}
 
 [package.extras]
 build = ["cmake (>=3.20,<4.0)", "lit"]
@@ -5478,50 +5544,17 @@ tests = ["autopep8", "isort", "llnl-hatchet", "numpy", "pytest", "pytest-forked"
 tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
-name = "trl"
-version = "0.28.0"
-description = "Train transformer language models with reinforcement learning."
-optional = false
-python-versions = ">=3.10"
-groups = ["full", "local"]
-files = [
-    {file = "trl-0.28.0-py3-none-any.whl", hash = "sha256:f01c6b4bbabe4db8c60ef8a7b0b7fe7f94859dd1c1cbe210daaa07fd4c26ddc9"},
-    {file = "trl-0.28.0.tar.gz", hash = "sha256:1b1269ac0ebb87465fc47c35664aed4e8e7ef67909098c7c0f801806ab89dd62"},
-]
-
-[package.dependencies]
-accelerate = ">=1.4.0"
-datasets = ">=3.0.0"
-packaging = ">20.0"
-transformers = ">=4.56.2"
-
-[package.extras]
-bco = ["joblib", "scikit-learn"]
-deepspeed = ["deepspeed (>=0.14.4)", "transformers (!=5.1.0)"]
-dev = ["Pillow", "bitsandbytes", "deepspeed (>=0.14.4)", "hf-doc-builder", "jmespath", "joblib", "kernels", "liger-kernel (>=0.6.4)", "llm-blender (>=0.0.2)", "num2words (==0.5.14)", "openai (>=1.23.2)", "peft (>=0.8.0)", "pre-commit", "pytest", "pytest-cov", "pytest-datadir (>=1.7.0)", "pytest-rerunfailures (==15.1)", "pytest-xdist", "scikit-learn", "torchvision"]
-judges = ["llm-blender (>=0.0.2)", "openai (>=1.23.2)", "transformers (<5.0.0)"]
-kernels = ["kernels"]
-liger = ["liger-kernel (>=0.6.4)"]
-math-verify = ["math-verify (>=0.5.2)"]
-peft = ["peft (>=0.8.0)"]
-quality = ["hf-doc-builder", "pre-commit"]
-quantization = ["bitsandbytes"]
-scikit = ["scikit-learn"]
-test = ["pytest", "pytest-cov", "pytest-datadir (>=1.7.0)", "pytest-rerunfailures (==15.1)", "pytest-xdist"]
-vllm = ["fastapi", "pydantic", "requests", "uvicorn", "vllm (>=0.10.2,<0.13.0)"]
-vlm = ["Pillow", "num2words (==0.5.14)", "torchvision"]
-
-[[package]]
 name = "typer"
 version = "0.24.1"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "typer-0.24.1-py3-none-any.whl", hash = "sha256:112c1f0ce578bfb4cab9ffdabc68f031416ebcc216536611ba21f04e9aa84c9e"},
     {file = "typer-0.24.1.tar.gz", hash = "sha256:e39b4732d65fbdcde189ae76cf7cd48aeae72919dea1fdfc16593be016256b45"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 annotated-doc = ">=0.0.2"
@@ -5535,11 +5568,12 @@ version = "0.24.0"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.10"
-groups = ["full", "llm", "local", "neural-g2p", "repository"]
+groups = ["main", "full", "llm", "local", "neural-g2p", "repository"]
 files = [
     {file = "typer_slim-0.24.0-py3-none-any.whl", hash = "sha256:d5d7ee1ee2834d5020c7c616ed5e0d0f29b9a4b1dd283bdebae198ec09778d0e"},
     {file = "typer_slim-0.24.0.tar.gz", hash = "sha256:f0ed36127183f52ae6ced2ecb2521789995992c521a46083bfcdbb652d22ad34"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"local\" or extra == \"neural-g2p\" or extra == \"repository\""}
 
 [package.dependencies]
 typer = ">=0.24.0"
@@ -5562,11 +5596,12 @@ version = "0.4.2"
 description = "Runtime typing introspection tools"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7"},
     {file = "typing_inspection-0.4.2.tar.gz", hash = "sha256:ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.dependencies]
 typing-extensions = ">=4.12.0"
@@ -5577,7 +5612,7 @@ version = "2025.3"
 description = "Provider of IANA time zone data"
 optional = false
 python-versions = ">=2"
-groups = ["main", "full", "local", "repository"]
+groups = ["main", "full", "repository"]
 markers = "sys_platform == \"win32\" or sys_platform == \"emscripten\" or python_version == \"3.10\""
 files = [
     {file = "tzdata-2025.3-py2.py3-none-any.whl", hash = "sha256:06a47e5700f3081aab02b2e513160914ff0694bce9947d6b76ebd6bf57cfc5d1"},
@@ -5613,7 +5648,7 @@ version = "2.6.3"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"},
     {file = "urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed"},
@@ -5649,7 +5684,7 @@ version = "2.1.1"
 description = "Module for decorators, wrappers and monkey patching."
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "optimization"]
+groups = ["main", "full", "optimization"]
 files = [
     {file = "wrapt-2.1.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7e927375e43fd5a985b27a8992327c22541b6dede1362fc79df337d26e23604f"},
     {file = "wrapt-2.1.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e1c99544b6a7d40ca22195563b6d8bc3986ee8bb82f272f31f0670fe9440c869"},
@@ -5726,6 +5761,7 @@ files = [
     {file = "wrapt-2.1.1-py3-none-any.whl", hash = "sha256:3b0f4629eb954394a3d7c7a1c8cca25f0b07cefe6aa8545e862e9778152de5b7"},
     {file = "wrapt-2.1.1.tar.gz", hash = "sha256:5fdcb09bf6db023d88f312bd0767594b414655d58090fc1c46b3414415f67fac"},
 ]
+markers = {main = "extra == \"optimization\" or extra == \"full\""}
 
 [package.extras]
 dev = ["pytest", "setuptools"]
@@ -5736,7 +5772,7 @@ version = "3.6.0"
 description = "Python binding for xxHash"
 optional = false
 python-versions = ">=3.7"
-groups = ["full", "local", "repository"]
+groups = ["main", "full", "repository"]
 files = [
     {file = "xxhash-3.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:87ff03d7e35c61435976554477a7f4cd1704c3596a89a8300d5ce7fc83874a71"},
     {file = "xxhash-3.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f572dfd3d0e2eb1a57511831cf6341242f5a9f8298a45862d085f5b93394a27d"},
@@ -5879,6 +5915,7 @@ files = [
     {file = "xxhash-3.6.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:15e0dac10eb9309508bfc41f7f9deaa7755c69e35af835db9cb10751adebc35d"},
     {file = "xxhash-3.6.0.tar.gz", hash = "sha256:f0162a78b13a0d7617b2845b90c763339d1f1d82bb04a4b07f4ab535cc5e05d6"},
 ]
+markers = {main = "extra == \"repository\" or extra == \"full\""}
 
 [[package]]
 name = "yarl"
@@ -5886,7 +5923,7 @@ version = "1.22.0"
 description = "Yet another URL library"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm", "local", "repository"]
+groups = ["main", "full", "llm", "repository"]
 files = [
     {file = "yarl-1.22.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:c7bd6683587567e5a49ee6e336e0612bec8329be1b7d4c8af5687dcdeb67ee1e"},
     {file = "yarl-1.22.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5cdac20da754f3a723cceea5b3448e1a2074866406adeb4ef35b469d089adb8f"},
@@ -6019,6 +6056,7 @@ files = [
     {file = "yarl-1.22.0-py3-none-any.whl", hash = "sha256:1380560bdba02b6b6c90de54133c81c9f2a453dee9912fe58c1dcced1edb7cff"},
     {file = "yarl-1.22.0.tar.gz", hash = "sha256:bebf8557577d4401ba8bd9ff33906f1376c877aa78d1fe216ad01b4d6745af71"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\" or extra == \"repository\""}
 
 [package.dependencies]
 idna = ">=2.0"
@@ -6031,11 +6069,12 @@ version = "3.23.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 optional = false
 python-versions = ">=3.9"
-groups = ["full", "llm"]
+groups = ["main", "full", "llm"]
 files = [
     {file = "zipp-3.23.0-py3-none-any.whl", hash = "sha256:071652d6115ed432f5ce1d34c336c0adfd6a884660d1e9712a256d3d3bd4b14e"},
     {file = "zipp-3.23.0.tar.gz", hash = "sha256:a07157588a12518c9d4034df3fbbee09c814741a33ff63c05fa29d26a2404166"},
 ]
+markers = {main = "extra == \"llm\" or extra == \"full\""}
 
 [package.extras]
 check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\""]
@@ -6045,7 +6084,16 @@ enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
 
+[extras]
+eval = ["matplotlib", "scipy"]
+full = ["anthropic", "bitsandbytes", "datasets", "huggingface-hub", "litellm", "matplotlib", "openai", "peft", "pulp", "pymoo", "scipy", "torch", "transformers"]
+llm = ["anthropic", "litellm", "openai"]
+local = ["bitsandbytes", "peft", "torch", "transformers"]
+neural-g2p = ["torch", "transformers"]
+optimization = ["pulp", "pymoo"]
+repository = ["datasets", "huggingface-hub"]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "11c72442e295971debfc99a090d27bfdf269a02fa4be7aecef205f33da8f8136"
+content-hash = "a49bd1ddc5cace41b39105d9b80476524163145c27343336cc1657053f7590f0"
