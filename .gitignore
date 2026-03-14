@@ -66,3 +66,6 @@ desktop.ini
 # Temp test/debug output
 *_results*.txt
 espeak_voices.txt
+
+# mkdocs
+site/

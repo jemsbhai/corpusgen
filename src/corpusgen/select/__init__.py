@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from corpusgen.select.base import SelectorBase
 from corpusgen.select.celf import CELFSelector
 from corpusgen.select.distribution import DistributionAwareSelector
@@ -46,7 +48,7 @@ def select_sentences(
     target_coverage: float = 1.0,
     candidate_phonemes: list[list[str]] | None = None,
     weights: dict[str, float] | None = None,
-    **algorithm_kwargs,
+    **algorithm_kwargs: Any,
 ) -> SelectionResult:
     """Select sentences from candidates for maximal phoneme coverage.
 
