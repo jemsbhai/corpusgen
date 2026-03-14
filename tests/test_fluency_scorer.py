@@ -18,6 +18,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+torch = pytest.importorskip("torch", reason="torch required for fluency scorer tests")
+
 
 # ===========================================================================
 # Fast tests: mocked model
@@ -30,8 +32,6 @@ def _make_mock_model_and_tokenizer():
     The mock model returns a fixed loss value when called, simulating
     the output of a causal LM forward pass.
     """
-    import torch
-
     tokenizer = MagicMock()
     tokenizer.return_value = {
         "input_ids": torch.tensor([[1, 2, 3, 4, 5]]),
@@ -138,7 +138,6 @@ class TestPerplexityFluencyScorerScoring:
 
     def test_lower_loss_gives_higher_score(self):
         """Lower model loss (lower perplexity) should yield higher score."""
-        import torch
         from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
 
         model, tokenizer = _make_mock_model_and_tokenizer()
@@ -162,7 +161,6 @@ class TestPerplexityFluencyScorerScoring:
     @patch("corpusgen.generate.scorers.fluency._load_model")
     def test_lazy_loads_on_first_call(self, mock_load_model, mock_load_tok):
         """Model should load on first scoring call."""
-        import torch
         from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
 
         model, tokenizer = _make_mock_model_and_tokenizer()
@@ -179,7 +177,6 @@ class TestPerplexityFluencyScorerScoring:
 
     def test_high_loss_still_positive_score(self):
         """Even very high loss should produce score > 0."""
-        import torch
         from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
 
         model, tokenizer = _make_mock_model_and_tokenizer()

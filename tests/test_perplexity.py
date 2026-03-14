@@ -34,6 +34,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+torch = pytest.importorskip("torch", reason="torch required for perplexity tests")
+
 from corpusgen.evaluate.perplexity import (
     CorpusPerplexityMetrics,
     compute_corpus_perplexity,
@@ -64,8 +66,6 @@ def _make_uniform_mocks(vocab_size: int = 4):
     Returns:
         (model, tokenizer, vocab_size) tuple.
     """
-    import torch
-
     tokenizer = MagicMock()
     tokenizer.pad_token = "<pad>"
     tokenizer.eos_token = "<eos>"
@@ -103,8 +103,6 @@ def _make_tokenizer_output(token_sequences: list[list[int]], pad_id: int = 0):
     Returns:
         Dict with ``input_ids`` and ``attention_mask`` tensors.
     """
-    import torch
-
     max_len = max(len(seq) for seq in token_sequences)
     padded_ids = []
     masks = []
@@ -366,8 +364,6 @@ class TestCorpusVsMeanPerplexity:
 
     def _make_differential_mocks(self):
         """Model where sentence A gets uniform logits, sentence B gets confident logits."""
-        import torch
-
         vocab_size = 4
 
         tokenizer = MagicMock()
