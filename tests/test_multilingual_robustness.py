@@ -12,6 +12,8 @@ import pytest
 from corpusgen.evaluate import evaluate
 from corpusgen.evaluate.report import EvaluationReport
 
+pytestmark = pytest.mark.slow
+
 
 # ---------------------------------------------------------------------------
 # Language test data: (language_code, sentences, label)

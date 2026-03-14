@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -42,5 +44,5 @@ jobs:
           pip install -e .
           pip install pytest pytest-cov
 
-      - name: Test
-        run: pytest tests/ -v --tb=short -m "not slow"
+      - name: Test with coverage
+        run: pytest tests/ -v --tb=short -m "not slow" --cov=corpusgen --cov-report=term-missing
