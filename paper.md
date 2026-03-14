@@ -41,11 +41,23 @@ Designed for researchers in speech processing, corpus linguistics, and Natural L
 
 By abstracting away the heavy engineering requirements of G2P mapping and distributed LLM generation, `corpusgen` allows researchers to focus directly on algorithmic design and linguistic analysis, accelerating the creation of equitable, high-quality speech resources across thousands of languages.
 
-# Comparison to existing software
+# State of the field
 
 Existing tools address individual components of the speech corpus engineering pipeline but none provide an integrated, language-agnostic framework. Festival/FestVox [@black_lenzo_festvox] offers greedy bigram-based prompt selection for TTS voice building, but is primarily English-centric and tightly coupled to its synthesis architecture. Phonemizer [@phonemizer] provides robust grapheme-to-phoneme conversion—which `corpusgen` uses as a backend—but includes no selection, generation, or evaluation capabilities. Phonological CorpusTools [@pct_hall] supports phonological analysis of existing corpora (e.g., functional load, phonotactic probability) but does not address corpus construction or optimization. Beyond these tools, researchers typically rely on ad-hoc, language-specific scripts implementing greedy selection heuristics [@bozkurt_greedy], which are rarely packaged or reproducible.
 
 `corpusgen` fills this gap by providing a unified pipeline from G2P conversion and PHOIBLE-backed inventory lookup through six pluggable selection algorithms to LLM-driven constrained text generation—capabilities that, to our knowledge, no existing package combines.
+
+# Software design
+
+`corpusgen` follows a modular pipeline architecture with four decoupled stages: inventory lookup, G2P conversion, selection/generation, and evaluation. Each stage communicates through plain Python data structures (lists of phoneme strings, dataclasses), allowing components to be used independently or composed into full workflows. The selection module implements a strategy pattern where all six algorithms share a common `SelectorBase` interface, making it straightforward to benchmark algorithms against each other or add new ones. The generation framework separates backend concerns (where text comes from) from orchestration logic (how coverage targets are tracked and updated), enabling the same `GenerationLoop` to drive repository selection, LLM API calls, or local model inference. Optional heavyweight dependencies (torch, pymoo, litellm) are isolated behind lazy imports and pip extras, keeping the core installation lightweight. The framework is distributed on PyPI and uses Poetry for reproducible dependency management, with a CI pipeline testing across Python 3.10, 3.12, and 3.13.
+
+# Research impact statement
+
+`corpusgen` was developed as part of doctoral research at the Florida Institute of Technology investigating phonetically-controlled text generation for speech corpus construction. The framework is being used to prepare experimental benchmarks for an upcoming submission to INTERSPEECH 2026. By providing a reproducible, open-source toolkit for a task that has historically required custom scripting, `corpusgen` aims to lower the barrier to entry for speech corpus research, particularly for under-resourced languages where phonetic coverage engineering is most critical.
+
+# AI usage disclosure
+
+Development of `corpusgen` was assisted by Claude (Anthropic), used as an interactive pair-programming and drafting tool throughout the project. Specifically, Claude assisted with code generation, test scaffolding, documentation writing, and drafting of this paper. All architectural decisions—including the choice of algorithms, module boundaries, API design, and evaluation methodology—were made by the human author. All code was reviewed, tested, and validated by the author before integration, following a strict test-driven development workflow with over 2,200 automated tests. The author takes full responsibility for the correctness and originality of the submitted work.
 
 # Acknowledgements
 
