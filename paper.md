@@ -2,16 +2,10 @@
 title: 'corpusgen: Language-Agnostic Speech Corpus Generation with Maximal Phoneme Coverage'
 tags:
   - Python
-  - speech processing
+  - speech corpus
+  - phoneme coverage
   - text-to-speech
-  - corpus linguistics
-  - natural language processing
-  - constrained text generation
-  - ASR
-  - speech
-  - linguistics
-  - artificial intelligence
-  - machine learning
+  - automatic speech recognition
 authors:
   - name: Muntaser Mansur Syed
     orcid: 0000-0002-4777-6469
