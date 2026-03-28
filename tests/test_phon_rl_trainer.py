@@ -668,6 +668,133 @@ class TestWiringRewardTracking:
 
 
 # =======================================================================
+# BUG REGRESSION — IPA inventory exposes _simple_char_phonemes defect
+#
+# The trainer must use real G2P (espeak) to phonemize generated text,
+# not _simple_char_phonemes which only produces ASCII characters.
+# With IPA targets like ʃ, θ, ɪ, the ASCII approximation produces
+# zero coverage regardless of what the model generates.
+# =======================================================================
+
+
+class TestIpaInventoryCoverage:
+    """Regression test: trainer must work with real IPA phoneme inventories.
+
+    _simple_char_phonemes("the pat bat kit") -> ['t','h','e','p','a','t',...]
+    These are ASCII characters, NOT IPA. With IPA targets like ʃ, θ, ɪ, æ, ŋ,
+    coverage will always be 0% — the trainer never produces a useful reward.
+
+    This test MUST FAIL until the trainer is fixed to use real G2P.
+    """
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_ipa_inventory_gets_nonzero_coverage(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+    ) -> None:
+        """With IPA targets, trainer should achieve non-zero coverage.
+
+        Original bug: _simple_char_phonemes returns ASCII chars that
+        never match IPA targets, so coverage stays at 0% forever.
+        Fix: trainer uses G2PManager.phonemize() for real IPA output.
+        """
+        # IPA phonemes that _simple_char_phonemes can NEVER produce
+        ipa_inventory = PhoneticTargetInventory(
+            target_phonemes=["ʃ", "θ", "ɪ", "æ", "ŋ"],
+            unit="phoneme",
+        )
+        ipa_reward = PhoneticReward(
+            targets=ipa_inventory,
+            coverage_weight=1.0,
+        )
+        config = TrainingConfig(
+            model_name="gpt2",
+            num_steps=3,
+            batch_size=1,
+            learning_rate=1e-5,
+            kl_coeff=0.1,
+            max_new_tokens=10,
+            seed=42,
+        )
+
+        _configure_mock_load(mock_load)
+
+        # Mock G2PManager to return realistic IPA phonemes for
+        # "the pat bat kit" (the mock tokenizer's decode output).
+        # Real espeak would produce these IPA symbols.
+        mock_g2p = MagicMock()
+        mock_g2p_result = MagicMock()
+        mock_g2p_result.phonemes = ["ð", "ə", "p", "æ", "t", "b", "æ", "t", "k", "ɪ", "t"]
+        mock_g2p.phonemize.return_value = mock_g2p_result
+        mock_g2p_cls.return_value = mock_g2p
+
+        trainer = PhonRLTrainer(reward=ipa_reward, config=config)
+        result = trainer.train(
+            prompts=["The shy thin cat sang."]
+        )
+
+        # With real G2P (mocked here), "æ" and "ɪ" from the phonemized
+        # output should match targets, giving non-zero coverage.
+        assert result.final_coverage > 0.0, (
+            "Trainer produced 0% coverage with IPA inventory. "
+            "This indicates _simple_char_phonemes is being used "
+            "instead of real G2P for phoneme extraction."
+        )
+        # Verify G2P was actually called (not _simple_char_phonemes)
+        assert mock_g2p.phonemize.call_count == 3  # once per step
+
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_all_existing_tests_use_ascii_phonemes_masking_bug(
+        self,
+        mock_load: MagicMock,
+    ) -> None:
+        """Demonstrate that ASCII-only inventories hide the bug.
+
+        With target ["p", "b", "t", "k"], _simple_char_phonemes
+        accidentally succeeds because those IPA symbols happen to be
+        identical to ASCII letters. This test documents WHY the bug
+        was not caught earlier.
+        """
+        # ASCII-compatible phonemes (these HAPPEN to work with the bug)
+        ascii_inventory = PhoneticTargetInventory(
+            target_phonemes=["p", "b", "t", "k"],
+            unit="phoneme",
+        )
+        ascii_reward = PhoneticReward(
+            targets=ascii_inventory,
+            coverage_weight=1.0,
+        )
+        config = TrainingConfig(
+            model_name="gpt2",
+            num_steps=3,
+            batch_size=1,
+            learning_rate=1e-5,
+            kl_coeff=0.1,
+            max_new_tokens=10,
+            seed=42,
+        )
+
+        _configure_mock_load(mock_load)
+        # Mock decodes to "the pat bat kit" which contains p, b, t, k
+        trainer = PhonRLTrainer(reward=ascii_reward, config=config)
+        result = trainer.train(
+            prompts=["Say pat bat kit."]
+        )
+
+        # This PASSES even with the bug, because "the pat bat kit"
+        # -> _simple_char_phonemes -> ['t','h','e','p','a','t','b','a','t','k','i','t']
+        # which matches targets p, b, t, k.
+        # This is WHY the bug was not caught: all existing tests
+        # use ASCII-compatible phoneme inventories.
+        assert result.final_coverage > 0.0, (
+            "Even ASCII inventory should get coverage (this test "
+            "documents why the bug was hidden, not the bug itself)."
+        )
+
+
+# =======================================================================
 # SLOW TESTS — Real models, real reward, real PPO updates
 #
 # Skipped by default. Run with:

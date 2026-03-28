@@ -102,6 +102,7 @@ class TrainingConfig:
     max_new_tokens: int = 64
     temperature: float = 0.8
     device: str | None = None  # None = auto-detect (CUDA if available, else CPU)
+    language: str = "en-us"  # espeak language code for G2P phonemization
     use_peft: bool = False
     peft_r: int = 8
     peft_alpha: int = 16
@@ -289,7 +290,7 @@ def _detect_device(device: str | None) -> str:
             logger.info(
                 "CUDA detected: %s (%s)",
                 torch.cuda.get_device_name(0),
-                f"{torch.cuda.get_device_properties(0).total_mem / 1e9:.1f}GB",
+                f"{torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB",
             )
         else:
             detected = "cpu"
@@ -511,7 +512,19 @@ class PhonRLTrainer:
             response_text = self._tokenizer.decode(
                 response_ids, skip_special_tokens=True
             )
-            phonemes = PhoneticReward._simple_char_phonemes(response_text)
+            # Use real G2P for accurate IPA phonemization.
+            # _simple_char_phonemes is ASCII-only and fails on IPA
+            # targets like ʃ, θ, ɪ — it must NOT be used here.
+            from corpusgen.g2p.manager import G2PManager
+
+            g2p = G2PManager()
+            try:
+                g2p_result = g2p.phonemize(
+                    response_text, language=self._config.language
+                )
+                phonemes = g2p_result.phonemes
+            except Exception:
+                phonemes = []
             reward_result = self._reward.commit_sentence_reward(
                 phonemes=phonemes,
                 text=response_text,
