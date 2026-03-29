@@ -669,6 +669,92 @@ class TestCommitSentenceReward:
 
 
 # -----------------------------------------------------------------------
+# BUG REGRESSION — IPA inventory exposes _simple_char_phonemes in token_rewards
+# -----------------------------------------------------------------------
+
+
+class TestTokenRewardsIpaRegression:
+    """Regression: token_rewards must use real G2P, not _simple_char_phonemes.
+
+    _simple_char_phonemes('pat') -> ['p','a','t'] (ASCII characters).
+    With IPA targets like \u0283, \u03b8, \u026a, \u00e6, \u014b, none of those ASCII
+    characters match, so token_rewards always returns 0.0.
+    """
+
+    def test_ipa_token_rewards_nonzero(self) -> None:
+        """token_rewards should produce non-zero rewards with IPA targets.
+
+        Uses IPA targets that _simple_char_phonemes can never match.
+        The mock G2P returns realistic IPA for the word 'pat' -> [p, \u00e6, t].
+        Target \u00e6 should match, giving non-zero reward.
+        """
+        from unittest.mock import MagicMock, patch
+
+        ipa_inventory = PhoneticTargetInventory(
+            target_phonemes=["\u0283", "\u03b8", "\u026a", "\u00e6", "\u014b"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(
+            targets=ipa_inventory,
+            coverage_weight=1.0,
+            language="en-us",
+        )
+
+        # Mock G2P to return real IPA for 'pat' -> [p, \u00e6, t]
+        mock_g2p = MagicMock()
+        mock_g2p_result = MagicMock()
+        mock_g2p_result.phonemes = ["p", "\u00e6", "t"]
+        mock_g2p.phonemize.return_value = mock_g2p_result
+
+        with patch("corpusgen.g2p.manager.G2PManager", return_value=mock_g2p):
+            mock_tokenizer = _MockTokenizer(["pat"])
+            result = reward.token_rewards(
+                token_ids=[0],
+                tokenizer=mock_tokenizer,
+            )
+
+        # \u00e6 in G2P output should match target \u00e6, giving non-zero reward
+        assert any(r > 0.0 for r in result.per_token_rewards), (
+            "token_rewards produced all-zero rewards with IPA inventory. "
+            "This indicates _simple_char_phonemes is being used "
+            "instead of real G2P."
+        )
+        mock_g2p.phonemize.assert_called()
+
+
+    def test_ipa_token_rewards_with_real_g2p(self) -> None:
+        """End-to-end: token_rewards with real espeak G2P, no mocks.
+
+        This test uses real G2P to phonemize 'cat' which should
+        produce IPA containing \u00e6 (near-open front unrounded vowel).
+        With \u00e6 in the target inventory, reward must be non-zero.
+        """
+        ipa_inventory = PhoneticTargetInventory(
+            target_phonemes=["\u00e6"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(
+            targets=ipa_inventory,
+            coverage_weight=1.0,
+            language="en-us",
+        )
+
+        # No mocks — real G2P, real espeak
+        mock_tokenizer = _MockTokenizer(["cat"])
+        result = reward.token_rewards(
+            token_ids=[0],
+            tokenizer=mock_tokenizer,
+        )
+
+        # Real espeak on 'cat' should produce k \u00e6 t.
+        # \u00e6 matches the target, so reward must be > 0.
+        assert any(r > 0.0 for r in result.per_token_rewards), (
+            "Real G2P on 'cat' should find \u00e6 matching target, "
+            f"but got all-zero rewards: {result.per_token_rewards}"
+        )
+
+
+# -----------------------------------------------------------------------
 # Mock tokenizer for token_rewards tests
 # -----------------------------------------------------------------------
 

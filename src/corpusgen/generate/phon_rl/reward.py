@@ -116,6 +116,7 @@ class PhoneticReward:
         coverage_weight: float = 1.0,
         phonotactic_weight: float = 0.0,
         fluency_weight: float = 0.0,
+        language: str = "en-us",
     ) -> None:
         if coverage_weight < 0:
             raise ValueError(
@@ -137,6 +138,7 @@ class PhoneticReward:
         self._coverage_weight = coverage_weight
         self._phonotactic_weight = phonotactic_weight
         self._fluency_weight = fluency_weight
+        self._language = language
 
     # -------------------------------------------------------------------
     # Properties
@@ -161,6 +163,11 @@ class PhoneticReward:
     def fluency_weight(self) -> float:
         """Weight for fluency component."""
         return self._fluency_weight
+
+    @property
+    def language(self) -> str:
+        """Language code for G2P phonemization."""
+        return self._language
 
     @property
     def phonotactic_scorer(self) -> Callable[[list[str]], float] | None:
@@ -371,7 +378,19 @@ class PhoneticReward:
                     words_phonemized.append(word)
 
                     # Compute coverage reward for this word
-                    word_phonemes = self._simple_char_phonemes(word)
+                    # Use real G2P for accurate IPA phonemization.
+                    # _simple_char_phonemes is ASCII-only and fails
+                    # on IPA targets — it must NOT be used here.
+                    from corpusgen.g2p.manager import G2PManager
+
+                    g2p = G2PManager()
+                    try:
+                        g2p_result = g2p.phonemize(
+                            word, language=self._language
+                        )
+                        word_phonemes = g2p_result.phonemes
+                    except Exception:
+                        word_phonemes = []
                     new_units = self._compute_new_units(word_phonemes)
                     if target_size > 0 and new_units:
                         per_token_rewards[i] = len(new_units) / target_size
