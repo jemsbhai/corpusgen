@@ -7,6 +7,7 @@ a target phoneme inventory and inspect the coverage report.
 Requirements:
     pip install corpusgen
     espeak-ng must be installed and on PATH
+    Download PHOIBLE once with: PhoibleDataset().download()
 """
 
 from corpusgen import evaluate

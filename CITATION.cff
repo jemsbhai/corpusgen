@@ -5,10 +5,28 @@ type: software
 authors:
   - family-names: Syed
     given-names: Muntaser
+    orcid: "https://orcid.org/0000-0002-4777-6469"
+    affiliation: Florida Institute of Technology
+  - family-names: Silaghi
+    given-names: Marius
+    orcid: "https://orcid.org/0000-0002-1109-8424"
+    affiliation: Florida Institute of Technology
+  - family-names: Abujar
+    given-names: Sheikh
+    orcid: "https://orcid.org/0000-0002-3563-2118"
+    affiliation: University of Alabama at Birmingham
+  - family-names: Khushbu
+    given-names: Sharun Akter
+    orcid: "https://orcid.org/0000-0002-8900-8580"
+    affiliation: Daffodil International University
+  - family-names: Jaigirdar
+    given-names: Fariha Tasmin
+    orcid: "https://orcid.org/0000-0003-1119-6056"
+    affiliation: Deakin University
 repository-code: https://github.com/jemsbhai/corpusgen
 url: https://pypi.org/project/corpusgen/
 license: Apache-2.0
-version: 0.1.6
+version: 0.1.7
 doi: 10.5281/zenodo.18881479
 date-released: "2026-08-11"
 keywords:

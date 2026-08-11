@@ -6,6 +6,7 @@ inspect its segments, and query by distinctive features.
 
 Requirements:
     pip install corpusgen
+    Download PHOIBLE once with: PhoibleDataset().download()
 """
 
 from corpusgen import get_inventory

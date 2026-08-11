@@ -220,7 +220,6 @@ We use **[Ruff](https://docs.astral.sh/ruff/)** for linting. The configuration i
 
 ```bash
 poetry run ruff check src/
-poetry run ruff check tests/
 ```
 
 To auto-fix issues:
@@ -296,7 +295,9 @@ poetry run pytest tests/ -q --no-header -m "not slow" --cov=corpusgen --cov-repo
 2. **Run the full quality check locally:**
 
    ```bash
-   poetry run ruff check src/ tests/
+   poetry check --lock
+   poetry run ruff check src/
+   poetry run mypy src/
    poetry run pytest tests/ -q --no-header -m "not slow"
    ```
 
@@ -353,7 +354,7 @@ corresponding Poetry groups below:
 | `local` | Local model backend (torch, transformers, bitsandbytes, peft) | `poetry install --with local` |
 | `repository` | HuggingFace dataset backend | `poetry install --with repository` |
 | `optimization` | ILP and NSGA-II selectors (pulp, pymoo) | `poetry install --with optimization` |
-| `eval` | Distribution metrics (scipy, matplotlib) | `poetry install --with eval` |
+| `eval` | Matplotlib support for plotting analysis results | `poetry install --with eval` |
 | `full` | Everything | `poetry install --with full` |
 
 When adding a new optional dependency:
@@ -372,11 +373,24 @@ When adding a new optional dependency:
 
 Releases are managed by the maintainers. The process is:
 
-1. Update `version` in `pyproject.toml` and `src/corpusgen/__init__.py`.
-2. Update `CHANGELOG.md` with the new version and changes.
-3. Update `CITATION.cff` with the new version and date.
-4. Commit, tag, and push: `git tag v0.x.y && git push origin main --tags`.
-5. Build and publish: `poetry build && poetry publish`.
+1. Update the version in `pyproject.toml`, `src/corpusgen/__init__.py`, and
+   `tests/test_smoke.py`.
+2. Update `CHANGELOG.md` and the version/date in `CITATION.cff`.
+3. Run the full quality check above, `mkdocs build --strict`, and the affected
+   slow tests.
+4. Merge through a pull request and wait for both CI and documentation
+   workflows to pass on the resulting `main` commit.
+5. Create and push an annotated tag from that exact commit:
+   `git tag -a v0.x.y -m "v0.x.y: summary" && git push origin v0.x.y`.
+6. Build from a clean checkout of the tag into an empty `dist/` directory, run
+   `python -m twine check --strict dist/*`, and smoke-install the wheel in a
+   fresh environment. Confirm `corpusgen.__version__`,
+   `importlib.metadata.version("corpusgen")`, and `corpusgen --version` agree.
+7. Upload only the verified artifacts to PyPI without `--skip-existing`, then
+   verify their published hashes and perform a no-cache installation from
+   PyPI.
+8. Create the GitHub Release from the same tag and confirm the Zenodo archive
+   if repository archiving is enabled.
 
 ---
 
