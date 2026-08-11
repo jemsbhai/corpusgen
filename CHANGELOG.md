@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refreshed the PyPI, installation, optional-dependency, API, example, and contributor release documentation.
 - Synchronized software creator names and ORCIDs with the Zenodo concept record referenced by the project DOI.
 - Preserved all five creator names in generated PyPI Core Metadata and pinned the build backend for reproducible artifacts.
+- Updated the documentation workflow to current Node 24-compatible GitHub Actions releases.
 - Added documentation, changelog, and issue-tracker links to the published package metadata.
 - Removed the unimplemented `neural-g2p` extra and the unused direct SciPy dependency from the `eval` extra.
 - Carries forward the correction set documented under 0.1.6; version 0.1.6 was tagged on GitHub but was not uploaded to PyPI.
