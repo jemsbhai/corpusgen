@@ -17,6 +17,8 @@ with the LM's learned representations.
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch  # type: ignore[import-not-found]
 import torch.nn as nn  # type: ignore[import-not-found]
 
@@ -88,4 +90,4 @@ class ValueHead(nn.Module):
         """
         x = self._dropout(hidden_states)
         values = self._linear(x)  # [..., 1]
-        return values.squeeze(-1)
+        return cast(torch.Tensor, values.squeeze(-1))

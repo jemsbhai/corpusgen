@@ -21,8 +21,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
+from corpusgen import __version__
 from corpusgen.cli import main
-
 
 # ===========================================================================
 # Helpers
@@ -92,7 +92,23 @@ class TestTopLevel:
     def test_version(self, runner):
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
-        assert "0." in result.output  # version string present
+        assert __version__ in result.output
+
+    @pytest.mark.parametrize("command", ["evaluate", "select", "inventory", "generate"])
+    def test_subcommand_help_is_ascii_safe(self, runner, command):
+        """Help must render on Windows consoles using legacy code pages."""
+        result = runner.invoke(main, [command, "--help"])
+        assert result.exit_code == 0
+        result.output.encode("ascii")
+
+    def test_select_distribution_example_renders_on_one_line(self, runner):
+        result = runner.invoke(main, ["select", "--help"])
+        assert result.exit_code == 0
+        normalized = " ".join(result.output.split())
+        assert (
+            "--algorithm distribution --target-distribution "
+            "'{\"p\": 0.6, \"t\": 0.4}'"
+        ) in normalized
 
 
 # ===========================================================================
@@ -632,7 +648,7 @@ class TestSelectCommand:
         ])
         assert result.exit_code == 0
         assert out.exists()
-        lines = [l for l in out.read_text().splitlines() if l.strip()]
+        lines = [line for line in out.read_text().splitlines() if line.strip()]
         assert len(lines) == 2
 
     @patch("corpusgen.cli.select.select_sentences")
@@ -1296,7 +1312,7 @@ class TestGenerateCommand:
         ])
         assert result.exit_code == 0
         assert out.exists()
-        lines = [l for l in out.read_text().splitlines() if l.strip()]
+        lines = [line for line in out.read_text().splitlines() if line.strip()]
         assert len(lines) == 3
 
     @patch(_GEN_PATCHES["GenerationLoop"])
@@ -2192,7 +2208,7 @@ class TestGenerateIntegration:
         ])
         assert result.exit_code == 0, result.output
         assert out.exists()
-        lines = [l for l in out.read_text().splitlines() if l.strip()]
+        lines = [line for line in out.read_text().splitlines() if line.strip()]
         assert len(lines) >= 1
 
     def test_repository_additive_phonemes(self, runner, tmp_path):

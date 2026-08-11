@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] — 2026-08-11
+
+### Changed
+
+- Refreshed the PyPI, installation, optional-dependency, API, example, and contributor release documentation.
+- Synchronized software creator names and ORCIDs with the Zenodo concept record referenced by the project DOI.
+- Preserved all five creator names in generated PyPI Core Metadata and pinned the build backend for reproducible artifacts.
+- Added documentation, changelog, and issue-tracker links to the published package metadata.
+- Removed the unimplemented `neural-g2p` extra and the unused direct SciPy dependency from the `eval` extra.
+- Carries forward the correction set documented under 0.1.6; version 0.1.6 was tagged on GitHub but was not uploaded to PyPI.
+
+### Fixed
+
+- Made `corpusgen generate --help` ASCII-safe for Windows consoles using legacy code pages.
+- Corrected the rendered `corpusgen select --help` distribution example.
+
+---
+
 ## [0.1.6] — 2026-08-11
 
 ### Added
@@ -106,6 +124,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 27 fast unit tests for phonotactic scorer (including 5 persistence tests)
 - 14 fast unit tests for fluency scorer (12 fast + 2 slow)
 - 20 fast CLI tests for scorer, guidance, dataset, template, and model-sharing flags
+
+---
+
+## [0.1.1] — 2026-02-26
+
+### Fixed
+
+- Added the optional pymoo `Problem` compatibility stub so base imports work without pymoo installed.
 
 ---
 

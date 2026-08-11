@@ -166,8 +166,7 @@ def select_cmd(
         corpusgen select -f pool.txt -l en-us --algorithm celf --max-sentences 50
         corpusgen select -f pool.txt -l fr-fr --target phoible --format json
         corpusgen select -f pool.txt -l en-us --output selected.txt
-        corpusgen select -f pool.txt -l en-us --algorithm distribution \
-            --target-distribution '{"p": 0.6, "t": 0.4}'
+        corpusgen select -f pool.txt -l en-us --algorithm distribution --target-distribution '{"p": 0.6, "t": 0.4}'
     """
     algorithm_kwargs: dict[str, Any] = {}
     if algorithm == "distribution":

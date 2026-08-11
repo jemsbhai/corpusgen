@@ -1,8 +1,11 @@
 [project]
 name = "corpusgen"
-version = "0.1.6"
+version = "0.1.7"
 description = "Language-agnostic framework for generating and evaluating speech corpora with maximal phoneme coverage"
-authors = [{name = "Muntaser Syed"}]
+# poetry-core 2.3 serializes only the first PEP 621 author entry to Core
+# Metadata. Keep one no-comma display string so PyPI preserves every creator;
+# CITATION.cff contains the structured author and ORCID records.
+authors = [{name = "Muntaser Syed and Marius Silaghi and Sheikh Abujar and Sharun Akter Khushbu and Fariha Tasmin Jaigirdar"}]
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -34,7 +37,10 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/jemsbhai/corpusgen"
+Documentation = "https://jemsbhai.github.io/corpusgen/"
 Repository = "https://github.com/jemsbhai/corpusgen"
+Changelog = "https://github.com/jemsbhai/corpusgen/blob/main/CHANGELOG.md"
+Issues = "https://github.com/jemsbhai/corpusgen/issues"
 
 [project.scripts]
 corpusgen = "corpusgen.cli:main"
@@ -42,15 +48,14 @@ corpusgen = "corpusgen.cli:main"
 [project.optional-dependencies]
 llm = ["litellm>=1.40", "openai>=1.12", "anthropic>=0.25"]
 local = ["torch>=2.1", "transformers>=4.38", "bitsandbytes>=0.43", "peft>=0.10"]
-neural-g2p = ["torch>=2.1", "transformers>=4.38"]
 repository = ["datasets>=2.18", "huggingface-hub>=0.20"]
 optimization = ["pulp>=2.7", "pymoo>=0.6"]
-eval = ["scipy>=1.11", "matplotlib>=3.8"]
+eval = ["matplotlib>=3.8"]
 full = [
     "litellm>=1.40", "openai>=1.12", "anthropic>=0.25",
     "torch>=2.1", "transformers>=4.38", "bitsandbytes>=0.43", "peft>=0.10",
     "datasets>=2.18", "huggingface-hub>=0.20",
-    "scipy>=1.11", "matplotlib>=3.8",
+    "matplotlib>=3.8",
     "pulp>=2.7", "pymoo>=0.6",
 ]
 
@@ -86,16 +91,9 @@ transformers = ">=4.38"
 bitsandbytes = ">=0.43"
 peft = ">=0.10"
 
-[tool.poetry.group.neural-g2p]
-optional = true
-[tool.poetry.group.neural-g2p.dependencies]
-transformers = ">=4.38"
-torch = ">=2.1"
-
 [tool.poetry.group.eval]
 optional = true
 [tool.poetry.group.eval.dependencies]
-scipy = ">=1.11"
 matplotlib = ">=3.8"
 
 [tool.poetry.group.optimization]
@@ -116,14 +114,13 @@ torch = ">=2.1"
 transformers = ">=4.38"
 bitsandbytes = ">=0.43"
 peft = ">=0.10"
-scipy = ">=1.11"
 matplotlib = ">=3.8"
 pulp = ">=2.7"
 pymoo = ">=0.6"
 
 # --- Build system ---
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core==2.3.1"]
 build-backend = "poetry.core.masonry.api"
 
 # --- Tool configs ---
@@ -163,18 +160,12 @@ disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
-    "anthropic.*",
-    "bitsandbytes.*",
     "datasets.*",
-    "huggingface_hub.*",
-    "matplotlib.*",
-    "openai.*",
     "peft.*",
     "phonemizer.*",
     "litellm.*",
     "pulp.*",
     "pymoo.*",
-    "scipy.*",
     "torch.*",
     "transformers.*",
 ]

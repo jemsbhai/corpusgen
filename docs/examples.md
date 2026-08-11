@@ -4,13 +4,30 @@ Runnable example scripts are in the [`examples/`](https://github.com/jemsbhai/co
 
 ## Prerequisites
 
-All examples require:
+The scripts live in the repository rather than the installed wheel. Clone the
+repository, enter it, and install the package:
 
 ```bash
-pip install corpusgen
+git clone https://github.com/jemsbhai/corpusgen.git
+cd corpusgen
+python -m pip install -e .
 ```
 
-espeak-ng must be installed and on your PATH. See the [installation guide](index.md#installation).
+The per-example prerequisites are:
+
+| Example | eSpeak NG | PHOIBLE data |
+|---|---:|---:|
+| 01 — inventory exploration | No | Yes |
+| 02 — sentence selection | Yes | No |
+| 03 — corpus evaluation | Yes | Yes |
+
+For Examples 02 and 03, install eSpeak NG using the
+[installation guide](index.md#installation). For Examples 01 and 03, download
+the pinned, checksum-verified PHOIBLE snapshot once:
+
+```bash
+python -c "from corpusgen.inventory import PhoibleDataset; PhoibleDataset().download()"
+```
 
 ---
 

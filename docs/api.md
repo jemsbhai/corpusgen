@@ -32,6 +32,10 @@ These are the primary entry points, importable directly from `corpusgen`.
 
 ::: corpusgen.inventory.models.Segment
 
+### PhoibleDataset
+
+::: corpusgen.inventory.phoible.PhoibleDataset
+
 ---
 
 ## Evaluation Results
@@ -51,6 +55,34 @@ These are the primary entry points, importable directly from `corpusgen`.
 ### Verbosity
 
 ::: corpusgen.evaluate.report.Verbosity
+
+### compute_distribution_metrics
+
+::: corpusgen.evaluate.distribution.compute_distribution_metrics
+
+### CoverageTrajectory
+
+::: corpusgen.evaluate.trajectory.CoverageTrajectory
+
+### compute_coverage_trajectory
+
+::: corpusgen.evaluate.trajectory.compute_coverage_trajectory
+
+### ErrorRateResult
+
+::: corpusgen.evaluate.error_rates.ErrorRateResult
+
+### compute_error_rates
+
+::: corpusgen.evaluate.error_rates.compute_error_rates
+
+### CorpusPerplexityMetrics
+
+::: corpusgen.evaluate.perplexity.CorpusPerplexityMetrics
+
+### compute_corpus_perplexity
+
+::: corpusgen.evaluate.perplexity.compute_corpus_perplexity
 
 ---
 
@@ -79,6 +111,45 @@ These are the primary entry points, importable directly from `corpusgen`.
 ### PhoneticScorer
 
 ::: corpusgen.generate.phon_ctg.scorer.PhoneticScorer
+
+### NgramPhonotacticScorer
+
+::: corpusgen.generate.scorers.phonotactic.NgramPhonotacticScorer
+
+### PerplexityFluencyScorer
+
+::: corpusgen.generate.scorers.fluency.PerplexityFluencyScorer
+
+### ReadabilityScorer
+
+::: corpusgen.generate.scorers.readability.ReadabilityScorer
+
+`ReadabilityScorer` is available as a Python scorer or candidate-filter hook;
+the CLI does not currently expose a readability flag.
+
+### PhoneticReward
+
+::: corpusgen.generate.phon_rl.reward.PhoneticReward
+
+### TrainingConfig
+
+::: corpusgen.generate.phon_rl.trainer.TrainingConfig
+
+### TrainingResult
+
+::: corpusgen.generate.phon_rl.trainer.TrainingResult
+
+### PhonRLTrainer
+
+::: corpusgen.generate.phon_rl.trainer.PhonRLTrainer
+
+### AttributeWordIndex
+
+::: corpusgen.generate.phon_datg.attribute_words.AttributeWordIndex
+
+### DATGStrategy
+
+::: corpusgen.generate.phon_datg.graph.DATGStrategy
 
 ---
 

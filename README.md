@@ -1,10 +1,16 @@
 # corpusgen
 
 [![DOI](https://zenodo.org/badge/1021961235.svg)](https://doi.org/10.5281/zenodo.18881479)
+[![PyPI](https://img.shields.io/pypi/v/corpusgen.svg)](https://pypi.org/project/corpusgen/)
+[![Python](https://img.shields.io/pypi/pyversions/corpusgen.svg)](https://pypi.org/project/corpusgen/)
+[![CI](https://github.com/jemsbhai/corpusgen/actions/workflows/ci.yml/badge.svg)](https://github.com/jemsbhai/corpusgen/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://jemsbhai.github.io/corpusgen/)
 
 **Language-agnostic framework for generating and evaluating speech corpora with maximal phoneme coverage.**
 
-`corpusgen` helps you build phonetically-balanced text corpora for speech synthesis (TTS), speech recognition (ASR), and clinical speech assessment — in any language.
+`corpusgen` helps you build phonetically-balanced text corpora for speech
+synthesis (TTS), speech recognition (ASR), and clinical speech assessment
+across many languages.
 
 ## Features
 
@@ -22,7 +28,7 @@
 
 - **6 selection algorithms** for corpus optimization:
   - **Greedy Set Cover** — ln(n)+1 approximation, the standard workhorse
-  - **CELF** — lazy evaluation speedup, identical results up to 700× faster
+  - **CELF** — submodularity-based lazy evaluation with the same greedy result
   - **Stochastic Greedy** — (1-1/e-ε) approximation, scales to massive corpora
   - **ILP** — exact optimal solutions via Integer Linear Programming (ground truth)
   - **Distribution-Aware** — KL-divergence minimization for frequency matching
@@ -35,14 +41,16 @@
   - **Local model backend** — HuggingFace transformers with CUDA auto-detect and 4-bit/8-bit quantization
 - **Phon-DATG** — inference-time logit steering for phonetically-targeted local generation
 - **Phon-RL** — PPO-based policy fine-tuning with composite phonetic reward (custom implementation, no trl dependency)
-- **Built-in scorers** — n-gram phonotactic naturalness + LM perplexity fluency scoring
+- **Built-in scorers** — n-gram phonotactics, LM perplexity, and API-level readability scoring
 - **CLI** — `corpusgen evaluate`, `corpusgen select`, `corpusgen inventory`, `corpusgen generate` from the command line
 
 ## Prerequisites
 
-### espeak-ng (required)
+### espeak-ng (required for G2P workflows)
 
-`corpusgen` uses [espeak-ng](https://github.com/espeak-ng/espeak-ng) for grapheme-to-phoneme conversion. Install it before using corpusgen.
+`corpusgen` uses [espeak-ng](https://github.com/espeak-ng/espeak-ng) for
+grapheme-to-phoneme conversion. Install it before running workflows that
+phonemize raw text.
 
 <details>
 <summary><strong>Windows</strong></summary>
@@ -95,7 +103,8 @@ RUN apt-get update && apt-get install -y espeak-ng && rm -rf /var/lib/apt/lists/
 
 ### PHOIBLE data (required for inventory-based features)
 
-The `inventory` command and PHOIBLE-targeted generation require the pinned
+`get_inventory()`, the `inventory` command, evaluation or selection with a
+`phoible` target, and every current generation workflow require the pinned
 PHOIBLE inventory dataset. Download and checksum-verify it once:
 
 ```python
@@ -103,15 +112,37 @@ from corpusgen.inventory import PhoibleDataset
 PhoibleDataset().download()  # cached at ~/.corpusgen/phoible.csv (~24 MB)
 ```
 
-This only needs to be done once. Evaluation can instead derive targets from
-observed phonemes and does not require PHOIBLE data.
+This only needs to be done once. Evaluation and selection can instead derive
+targets from observed or candidate phonemes and do not require PHOIBLE data.
+Every current `generate` command resolves a PHOIBLE baseline; `--phonemes`
+adds symbols to that baseline rather than replacing it.
 
 ## Installation
 
 ### From PyPI
 
 ```bash
-pip install corpusgen
+python -m pip install --upgrade corpusgen
+corpusgen --version
+```
+
+### Optional features
+
+Install only the integrations you need:
+
+| Extra | Enables |
+|---|---|
+| `llm` | LLM API generation with LiteLLM, OpenAI, and Anthropic |
+| `local` | Local HuggingFace models, Phon-DATG, and Phon-RL |
+| `repository` | HuggingFace dataset-backed repositories |
+| `optimization` | ILP and NSGA-II selection |
+| `eval` | Matplotlib support for plotting analysis results |
+| `full` | All optional integrations |
+
+```bash
+python -m pip install "corpusgen[llm]"
+# Or install every optional integration:
+python -m pip install "corpusgen[full]"
 ```
 
 ### Development setup
@@ -135,12 +166,17 @@ install`) with `poetry run python -m pip install`. Supported CUDA build indexes
 change over time.
 
 ```bash
-# 1. Install corpusgen with local model dependencies
+# PyPI users:
+python -m pip install "corpusgen[local]"
+
+# Contributors working from a clone:
 poetry install --with local
 
-# 2. Install the GPU-enabled PyTorch build using the selector-generated
-#    command as described above, then verify GPU access:
+# Install the GPU-enabled PyTorch build using the selector-generated
+# command as described above, then verify GPU access (PyPI install):
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
 
+# Contributor equivalent:
 poetry run python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
 ```
 
@@ -160,8 +196,8 @@ report = corpusgen.evaluate(
 )
 
 print(report.render())
-print(report.coverage)           # 0.65
-print(report.missing_phonemes)   # {'ʒ', 'ð', 'θ', ...}
+print(f"Coverage: {report.coverage:.1%}")
+print(sorted(report.missing_phonemes))
 ```
 
 ### Select optimal sentences from a candidate pool
@@ -180,12 +216,15 @@ candidates = [
 result = corpusgen.select_sentences(
     candidates,
     language="en-us",
-    algorithm="greedy",  # or "celf", "stochastic", "ilp", "distribution", "nsga2"
+    algorithm="greedy",  # also: "celf" or "stochastic"
 )
 
 print(f"Selected {result.num_selected} of {len(candidates)} sentences")
 print(f"Coverage: {result.coverage:.1%}")
 ```
+
+ILP and NSGA-II require the `optimization` extra. Distribution-aware selection
+also requires a `target_distribution`; see the [API documentation](https://jemsbhai.github.io/corpusgen/).
 
 ### Generate a corpus from a sentence pool
 
@@ -211,7 +250,11 @@ from corpusgen.g2p.manager import G2PManager
 
 # 1. Phonemize a sentence pool
 g2p = G2PManager()
-sentences = ["The cat sat on the mat.", "Big dogs bark loudly.", ...]
+sentences = [
+    "The cat sat on the mat.",
+    "Big dogs bark loudly.",
+    "Six green frogs jumped into the pond.",
+]
 results = g2p.phonemize_batch(sentences, language="en-us")
 pool = [
     {"text": s, "phonemes": r.phonemes}
@@ -220,7 +263,7 @@ pool = [
 
 # 2. Set up targets, scorer, and backend
 targets = PhoneticTargetInventory(
-    target_phonemes=["p", "b", "t", "d", "k", "g"],
+    target_phonemes=["p", "b", "t", "d", "k", "ɡ"],
     unit="phoneme",
 )
 scorer = PhoneticScorer(targets=targets, coverage_weight=1.0)
@@ -246,7 +289,8 @@ print(f"Generated {result.num_generated} sentences, coverage: {result.coverage:.
 Via CLI:
 
 ```bash
-# Requires: poetry install --with llm
+# Requires: python -m pip install "corpusgen[llm]"
+# Contributor equivalent: poetry install --with llm
 corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --max-sentences 20
 ```
 
@@ -254,20 +298,28 @@ Or Python API:
 
 ```python
 from corpusgen.generate.backends.llm_api import LLMBackend
+from corpusgen.generate.phon_ctg.loop import GenerationLoop, StoppingCriteria
+from corpusgen.generate.phon_ctg.scorer import PhoneticScorer
+from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
 
-# Requires: poetry install --with llm
+# Requires: python -m pip install "corpusgen[llm]"
 # Set your API key: export OPENAI_API_KEY=...
 backend = LLMBackend(
     model="gpt-4o-mini",
     language="en-us",
 )
 
-# Use with the same GenerationLoop as above
+# This is an alternative setup, so start with a fresh target state.
+llm_targets = PhoneticTargetInventory(
+    target_phonemes=["p", "b", "t", "d", "k", "ɡ"],
+    unit="phoneme",
+)
+llm_scorer = PhoneticScorer(targets=llm_targets, coverage_weight=1.0)
 loop = GenerationLoop(
     backend=backend,
-    targets=targets,
-    scorer=scorer,
-    stopping_criteria=StoppingCriteria(target_coverage=0.9),
+    targets=llm_targets,
+    scorer=llm_scorer,
+    stopping_criteria=StoppingCriteria(target_coverage=0.9, max_sentences=20),
 )
 result = loop.run()
 ```
@@ -279,7 +331,7 @@ from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
 from corpusgen.generate.phon_rl.reward import PhoneticReward
 from corpusgen.generate.phon_rl.trainer import PhonRLTrainer, TrainingConfig
 
-# Requires: poetry install --with local
+# Requires: python -m pip install "corpusgen[local]"
 
 # 1. Define targets and reward
 targets = PhoneticTargetInventory(
@@ -318,14 +370,17 @@ trainer.save_checkpoint("./phon_rl_checkpoint")
 from corpusgen import get_inventory
 
 inv = get_inventory("en-us")
-print(inv.language_name)          # 'English'
-print(inv.consonants)             # ['p', 'b', 't', 'd', 'k', ...]
-print(inv.vowels)                 # ['iː', 'ɪ', 'ɛ', 'æ', ...]
+print(inv.language_name)
+print(inv.consonants)
+print(inv.vowels)
 
 # Query by distinctive features
 nasals = inv.segments_with_feature("nasal", "+")
-print([s.phoneme for s in nasals])  # ['m', 'n', 'ŋ']
+print([s.phoneme for s in nasals])
 ```
+
+An eSpeak voice such as `en-us` is mapped to an ISO 639-3 code, after which
+`get_inventory()` returns the largest matching PHOIBLE inventory by default.
 
 ### Evaluate with diphone or triphone coverage
 
@@ -397,12 +452,16 @@ print(f"Pearson correlation: {dm_ref.pearson_correlation}")
 
 ```python
 from corpusgen.evaluate.trajectory import compute_coverage_trajectory
+from corpusgen.g2p import G2PManager
 
-# From a SelectionResult
+sentences = ["The cat sat on the mat.", "Big dogs dig deep holes."]
+g2p = G2PManager()
+sequences = [g2p.phonemize(text, language="en-us").phonemes for text in sentences]
+target_units = {phoneme for sequence in sequences for phoneme in sequence}
 traj = compute_coverage_trajectory(
-    [candidate_phonemes[i] for i in result.selected_indices],
-    target_units=result.covered_units | result.missing_units,
-    unit=result.unit,
+    sequences,
+    target_units=target_units,
+    unit="phoneme",
 )
 
 # Easy plotting
@@ -414,7 +473,7 @@ plt.title("Coverage Saturation Curve")
 plt.show()
 
 # Access marginal gains per sentence
-print(traj.gains)  # [5, 3, 2, 1, 1, 0, ...]
+print(traj.gains)
 ```
 
 ### Evaluate text quality
@@ -439,7 +498,8 @@ print(f"Avg sentence length: {tq.sentence_length_words_mean:.1f} words")
 ```python
 from corpusgen.evaluate.perplexity import compute_corpus_perplexity
 
-# Simple — loads GPT-2 automatically (requires: poetry install --with local)
+# Simple — loads GPT-2 automatically
+# Requires: python -m pip install "corpusgen[local]"
 metrics = compute_corpus_perplexity(
     ["The cat sat on the mat.", "Big dogs dig deep holes."],
     model_name="gpt2",
@@ -454,17 +514,18 @@ print(f"Total tokens:      {metrics.num_tokens}")
 for i, ppl in enumerate(metrics.per_sentence):
     print(f"  Sentence {i}: PPL = {ppl:.2f}")
 
-# Shared model — avoids loading the same model twice when you are
-# also using PerplexityFluencyScorer during generation:
+# Shared model — inject the same public model and tokenizer objects into both APIs:
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
 
-scorer = PerplexityFluencyScorer(model_name="gpt2", device="cuda")
-scorer("warm-up call to trigger lazy load")
+tokenizer = AutoTokenizer.from_pretrained("gpt2")
+model = AutoModelForCausalLM.from_pretrained("gpt2")
+scorer = PerplexityFluencyScorer.from_model(model, tokenizer)
 
 metrics = compute_corpus_perplexity(
-    sentences,
-    model=scorer._model,
-    tokenizer=scorer._tokenizer,
+    ["The cat sat on the mat.", "Big dogs dig deep holes."],
+    model=model,
+    tokenizer=tokenizer,
 )
 ```
 
@@ -514,6 +575,7 @@ corpusgen evaluate --file corpus.txt -l en-us --verbosity verbose
 corpusgen select --file candidates.txt --language en-us
 corpusgen select -f pool.txt -l en-us --algorithm celf --max-sentences 50
 corpusgen select -f pool.txt -l en-us --target phoible --target-coverage 0.95
+corpusgen select -f pool.txt -l en-us --algorithm distribution --target-distribution '{"p":0.6,"t":0.4}'
 corpusgen select -f pool.txt -l en-us --output selected.txt --format json
 
 # Generate sentences targeting phoneme coverage
@@ -524,15 +586,16 @@ corpusgen generate -b repository -l en-us --file pool.txt --phonemes "ʃ,ʒ,θ" 
 corpusgen generate -b repository -l en-us --file pool.txt --output generated.txt
 
 # --- Repository backend with HuggingFace dataset ---
-corpusgen generate -b repository -l en-us --dataset wikitext --split train --max-samples 1000
+# Requires: python -m pip install "corpusgen[repository]"
+corpusgen generate -b repository -l en-us --dataset ag_news --split train --max-samples 1000
 
 # --- LLM API backend (requires API key) ---
 corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --max-sentences 20
-corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --api-key sk-... --llm-temperature 0.9
+corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini --api-key sk-... --llm-temperature 0.9 --max-sentences 20
 
 # --- Local model backend (requires torch) ---
 corpusgen generate -b local -l en-us --model gpt2 --device cuda --max-sentences 30
-corpusgen generate -b local -l en-us --model gpt2 --quantization 4bit --local-temperature 0.7
+corpusgen generate -b local -l en-us --model gpt2 --quantization 4bit --local-temperature 0.7 --max-sentences 30
 
 # --- With built-in scorers (multi-objective candidate ranking) ---
 corpusgen generate -b repository -l en-us --file pool.txt \
@@ -546,15 +609,15 @@ corpusgen generate -b repository -l en-us --file pool.txt \
   --phonotactic-corpus reference.txt --phonotactic-n 3
 
 # --- With guidance strategies (local backend only) ---
-corpusgen generate -b local -l en-us --model gpt2 --guidance datg --datg-boost 5.0
-corpusgen generate -b local -l en-us --model gpt2 --guidance rl --rl-adapter-path ./checkpoint
-corpusgen generate -b local -l en-us --model gpt2 --guidance datg --guidance-config datg.json
+corpusgen generate -b local -l en-us --model gpt2 --guidance datg --datg-boost 5.0 --max-sentences 30
+corpusgen generate -b local -l en-us --model gpt2 --guidance rl --rl-adapter-path ./checkpoint --max-sentences 30
+corpusgen generate -b local -l en-us --model gpt2 --guidance datg --guidance-config datg.json --max-sentences 30
 
 # --- Custom prompt templates ---
 corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini \
-  --prompt-template "Write {k} English sentences containing: {target_units}"
+  --prompt-template "Write {k} English sentences containing: {target_units}" --max-sentences 20
 corpusgen generate -b llm_api -l en-us --model openai/gpt-4o-mini \
-  --prompt-template prompt.txt
+  --prompt-template prompt.txt --max-sentences 20
 ```
 
 ## Architecture
@@ -599,7 +662,8 @@ corpusgen/
 │   │   └── loop.py       # GenerationLoop + StoppingCriteria
 │   ├── scorers/          # Built-in scoring functions
 │   │   ├── phonotactic.py # NgramPhonotacticScorer (save/load, corpus-trained)
-│   │   └── fluency.py    # PerplexityFluencyScorer (lazy LM, model sharing)
+│   │   ├── fluency.py    # PerplexityFluencyScorer (lazy LM, model sharing)
+│   │   └── readability.py # ReadabilityScorer (Python API hook)
 │   ├── phon_rl/          # RL-based guidance (PPO)
 │   │   ├── reward.py     # PhoneticReward (composite, hierarchical)
 │   │   ├── trainer.py    # PhonRLTrainer (custom PPO, no trl)
@@ -618,13 +682,16 @@ corpusgen/
 
 ## Language Support
 
-`corpusgen` supports any language available in both espeak-ng and PHOIBLE:
+G2P supports eSpeak NG voices. PHOIBLE-targeted workflows additionally require
+a voice represented in corpusgen's bundled eSpeak-to-ISO mapping, or a direct
+ISO/Glottocode inventory lookup where the API accepts one.
 
 - **G2P (espeak-ng):** 100+ languages
 - **Inventories (PHOIBLE):** 2,186 languages, 3,020 inventories, 8 sources
-- **Tested across:** 40 languages, 12 language families, 10+ scripts
+- **Tested across:** 40 languages, 12 language families, 10+ writing systems
 
-The espeak-to-PHOIBLE mapping covers 85+ languages with automatic macrolanguage resolution (e.g., `ms` → Standard Malay, `sw` → Swahili).
+The bundled mapping covers 131 eSpeak voice codes and 115 ISO codes, with
+automatic macrolanguage resolution (for example, `ms` maps to Standard Malay).
 
 ## Reproducibility
 
@@ -642,7 +709,7 @@ If you use `corpusgen` in your research, please cite:
 ```bibtex
 @software{corpusgen2026,
   title={corpusgen: Language-Agnostic Speech Corpus Generation with Maximal Phoneme Coverage},
-  author={Syed, Muntaser},
+  author={Syed, Muntaser and Silaghi, Marius and Abujar, Sheikh and Khushbu, Sharun Akter and Jaigirdar, Fariha Tasmin},
   year={2026},
   doi={10.5281/zenodo.18881479},
   url={https://github.com/jemsbhai/corpusgen}

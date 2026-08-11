@@ -480,7 +480,7 @@ def generate_cmd(
         corpusgen generate -b repository -l en-us -f pool.txt
         corpusgen generate -b llm_api -l en-us -m openai/gpt-4o-mini
         corpusgen generate -b local -l en-us -m gpt2 --device cuda
-        corpusgen generate -b repository -l en-us -f pool.txt --phonemes "ʃ,ʒ,θ"
+        corpusgen generate -b repository -l en-us -f pool.txt --phonemes "p,b,t"
         corpusgen generate -b repository -l en-us -f pool.txt --weights "p:2.0,b:1.5"
     """
     # ---------------------------------------------------------------

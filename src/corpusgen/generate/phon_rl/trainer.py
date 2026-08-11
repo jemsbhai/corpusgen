@@ -439,7 +439,7 @@ def _load_model_and_tokenizer(
         tokenizer.pad_token = tokenizer.eos_token
 
     logger.info("Loading model %s on device=%s", model_name, device)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model: Any = AutoModelForCausalLM.from_pretrained(model_name)
     model = model.to(device)
 
     if use_peft:

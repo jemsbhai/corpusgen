@@ -50,7 +50,7 @@ def _load_model(model_name: str, device: str) -> Any:
     """
     from transformers import AutoModelForCausalLM  # type: ignore[import-not-found, import-untyped]
 
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model: Any = AutoModelForCausalLM.from_pretrained(model_name)
     model = model.to(device)
     model.eval()
     return model
