@@ -123,6 +123,11 @@ class TestDistributionAwareSelector:
         with pytest.raises(ValueError, match="positive"):
             DistributionAwareSelector(target_distribution={"a": -0.1, "b": 1.1})
 
+    @pytest.mark.parametrize("value", [0.0, float("nan"), float("inf")])
+    def test_distribution_values_must_be_positive_and_finite(self, value):
+        with pytest.raises(ValueError, match="positive and finite"):
+            DistributionAwareSelector(target_distribution={"a": value})
+
     def test_distribution_auto_normalizes(self):
         """Non-normalized distributions should be accepted and normalized."""
         target = {"a": 2.0, "b": 2.0}

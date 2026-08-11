@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] — 2026-08-11
+
+### Added
+
+- Cross-platform wheel smoke tests on Ubuntu, macOS, and Windows with real eSpeak NG integration.
+- CLI support for PHOIBLE inventory sources and target distributions.
+
+### Changed
+
+- Migrated published package metadata to PEP 621 and refreshed the Poetry lock file.
+- Pinned and checksum-verified the PHOIBLE snapshot used by the default cache.
+- Expanded validation and actionable error reporting across public APIs and CLI commands.
+
+### Fixed
+
+- Correctness and termination edge cases in greedy, CELF, stochastic, distribution-aware, ILP, and NSGA-II selection.
+- Phon-RL batching, variable-length response masking, PPO state alignment, atomic G2P scoring, SentencePiece boundaries, and checkpoint reporting.
+- Repository and local generation behavior for dataset dictionaries, missing text columns, zero sample limits, automatic devices, and deterministic decoding.
+- Evaluation aggregation for empty references, mismatched phoneme inputs, duplicate targets, and invalid numeric configuration.
+- Windows eSpeak NG discovery and PHOIBLE cache diagnostics across inventory, evaluation, selection, and generation commands.
+
+---
+
+## [0.1.5] — 2026-03-29
+
+### Changed
+
+- Added language-aware G2P configuration to `PhoneticReward`.
+
+### Fixed
+
+- Replaced ASCII character decomposition in token-level and hierarchical phonetic rewards with real G2P, restoring coverage rewards for IPA targets.
+
+---
+
+## [0.1.4] — 2026-03-28
+
+### Added
+
+- Added language-aware G2P configuration to `TrainingConfig`.
+
+### Fixed
+
+- Replaced ASCII character decomposition in Phon-RL training with real G2P, restoring IPA target coverage.
+- Corrected CUDA device-memory detection to use PyTorch's `total_memory` attribute.
+
+---
+
 ## [0.1.3] — 2026-02-26
 
 ### Added

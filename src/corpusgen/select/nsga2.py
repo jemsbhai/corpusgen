@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import time
 from collections import Counter
+from typing import Any, TypedDict
 
 import numpy as np
 
@@ -26,6 +27,15 @@ except ImportError:
         """Stub when pymoo is not installed."""
 
         pass
+
+
+class _ParetoEntry(TypedDict, total=False):
+    """Typed representation of one solution on the Pareto front."""
+
+    coverage: float
+    n_sentences: int
+    selected_indices: list[int]
+    kl_divergence: float
 
 
 class _CoverageSelectionProblem(Problem):
@@ -74,7 +84,13 @@ class _CoverageSelectionProblem(Problem):
             vtype=bool,
         )
 
-    def _evaluate(self, X, out, *args, **kwargs):
+    def _evaluate(
+        self,
+        X: np.ndarray,
+        out: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         # X is (pop_size, n_candidates) binary matrix
         pop_size = X.shape[0]
         f = np.zeros((pop_size, self.n_obj))
@@ -110,6 +126,7 @@ class _CoverageSelectionProblem(Problem):
 
             # Constraint: max sentences
             if g is not None:
+                assert self.max_sentences is not None
                 g[i, 0] = n_selected - self.max_sentences
 
         out["F"] = f
@@ -117,14 +134,18 @@ class _CoverageSelectionProblem(Problem):
             out["G"] = g
 
     def _kl_divergence(self, counts: Counter[str]) -> float:
+        target_distribution = self.target_distribution
+        if target_distribution is None:
+            raise RuntimeError("target_distribution is required for KL divergence")
+
         total = sum(counts.values())
         if total == 0:
             return 1e6  # Large penalty for empty selection
-        units = set(self.target_distribution.keys())
+        units = set(target_distribution)
         smoothed_total = total + len(units)
         kl = 0.0
         for u in units:
-            p = self.target_distribution[u]
+            p = target_distribution[u]
             q = (counts.get(u, 0) + 1) / smoothed_total
             if p > 0:
                 kl += p * math.log(p / q)
@@ -180,10 +201,9 @@ class NSGA2Selector(SelectorBase):
 
         self._target_distribution = None
         if target_distribution is not None:
-            total = sum(target_distribution.values())
-            self._target_distribution = {
-                k: v / total for k, v in target_distribution.items()
-            }
+            self._target_distribution = self._normalize_target_distribution(
+                target_distribution
+            )
 
         self._population_size = population_size
         self._n_generations = n_generations
@@ -203,6 +223,9 @@ class NSGA2Selector(SelectorBase):
         weights: dict[str, float] | None = None,
     ) -> SelectionResult:
         start = time.perf_counter()
+        self._validate_select_inputs(
+            candidates, candidate_phonemes, max_sentences, target_coverage, weights
+        )
 
         # Edge case: empty target
         if not target_units:
@@ -221,6 +244,21 @@ class NSGA2Selector(SelectorBase):
 
         # Edge case: no candidates
         if not candidates:
+            return SelectionResult(
+                selected_indices=[],
+                selected_sentences=[],
+                coverage=0.0,
+                covered_units=set(),
+                missing_units=set(target_units),
+                unit=self.unit,
+                algorithm=self.algorithm_name,
+                elapsed_seconds=time.perf_counter() - start,
+                iterations=0,
+                metadata={"pareto_front": []},
+            )
+
+        # A zero threshold is already satisfied without selecting anything.
+        if target_coverage == 0.0:
             return SelectionResult(
                 selected_indices=[],
                 selected_sentences=[],
@@ -276,7 +314,7 @@ class NSGA2Selector(SelectorBase):
         )
 
         # Extract Pareto front
-        pareto_front = []
+        pareto_front: list[_ParetoEntry] = []
         target_count = len(target_units)
 
         if res.X is not None:
@@ -284,16 +322,16 @@ class NSGA2Selector(SelectorBase):
             X = res.X if res.X.ndim == 2 else res.X.reshape(1, -1)
 
             for sol in X:
-                indices = list(np.where(sol > 0.5)[0])
+                indices = [int(i) for i in np.where(sol > 0.5)[0]]
                 covered = set()
                 for idx in indices:
                     covered |= candidate_units[idx]
                 cov = len(covered) / target_count if target_count > 0 else 1.0
 
-                entry = {
+                entry: _ParetoEntry = {
                     "coverage": cov,
                     "n_sentences": len(indices),
-                    "selected_indices": [int(i) for i in indices],
+                    "selected_indices": indices,
                 }
 
                 if self._target_distribution is not None and candidate_unit_lists is not None:
@@ -307,12 +345,34 @@ class NSGA2Selector(SelectorBase):
 
                 pareto_front.append(entry)
 
-        # Select best solution: highest coverage, then fewest sentences
+        # Prefer the smallest Pareto solution that satisfies the requested
+        # coverage threshold. Distribution-aware runs use KL divergence as
+        # the next tie-breaker. If the threshold is infeasible, fall back to
+        # the maximum-coverage solution.
         if pareto_front:
-            best = max(
-                pareto_front,
-                key=lambda e: (e["coverage"], -e["n_sentences"]),
-            )
+            eligible = [
+                entry
+                for entry in pareto_front
+                if entry["coverage"] >= target_coverage
+            ]
+            if eligible:
+                best = min(
+                    eligible,
+                    key=lambda entry: (
+                        entry["n_sentences"],
+                        entry.get("kl_divergence", 0.0),
+                        -entry["coverage"],
+                    ),
+                )
+            else:
+                best = max(
+                    pareto_front,
+                    key=lambda entry: (
+                        entry["coverage"],
+                        -entry["n_sentences"],
+                        -entry.get("kl_divergence", 0.0),
+                    ),
+                )
             best_indices = best["selected_indices"]
         else:
             best_indices = []
@@ -337,4 +397,3 @@ class NSGA2Selector(SelectorBase):
             iterations=self._n_generations,
             metadata={"pareto_front": pareto_front},
         )
-

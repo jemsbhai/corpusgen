@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from corpusgen.select.base import SelectorBase
 from corpusgen.select.celf import CELFSelector
@@ -10,6 +10,7 @@ from corpusgen.select.distribution import DistributionAwareSelector
 from corpusgen.select.greedy import GreedySelector
 from corpusgen.select.result import SelectionResult
 from corpusgen.select.stochastic import StochasticGreedySelector
+from corpusgen.weights import validate_unit_weights
 
 # Optional dependency selectors
 try:
@@ -24,7 +25,7 @@ except ImportError:
 
 
 # Algorithms that need no optional dependencies
-_CORE_ALGORITHMS = {
+_CORE_ALGORITHMS: dict[str, type[SelectorBase]] = {
     "greedy": GreedySelector,
     "celf": CELFSelector,
     "stochastic": StochasticGreedySelector,
@@ -32,7 +33,7 @@ _CORE_ALGORITHMS = {
 }
 
 # Algorithms that need optional dependencies
-_OPTIONAL_ALGORITHMS = {
+_OPTIONAL_ALGORITHMS: dict[str, tuple[str, str, str]] = {
     "ilp": ("ILPSelector", "pulp", "corpusgen[optimization]"),
     "nsga2": ("NSGA2Selector", "pymoo", "corpusgen[optimization]"),
 }
@@ -89,6 +90,15 @@ def select_sentences(
             f"Invalid unit: {unit!r}. Must be one of {valid_units}"
         )
 
+    SelectorBase._validate_limits(max_sentences, target_coverage)
+    validate_unit_weights(weights)
+
+    if isinstance(target_phonemes, str) and target_phonemes.lower() != "phoible":
+        raise ValueError(
+            "target_phonemes must be a list of phonemes, None, or "
+            f"the string 'phoible'; got {target_phonemes!r}"
+        )
+
     # --- Validate candidate_phonemes length ---
     if candidate_phonemes is not None and len(candidate_phonemes) != len(candidates):
         raise ValueError(
@@ -105,7 +115,7 @@ def select_sentences(
         candidate_phonemes = [r.phonemes for r in g2p_results]
 
     # --- Resolve target_phonemes ---
-    if isinstance(target_phonemes, str) and target_phonemes.lower() == "phoible":
+    if isinstance(target_phonemes, str):
         from corpusgen.inventory.phoible import PhoibleDataset
 
         ds = PhoibleDataset()
@@ -139,7 +149,11 @@ def select_sentences(
     )
 
 
-def _make_selector(algorithm: str, unit: str, **kwargs) -> SelectorBase:
+def _make_selector(
+    algorithm: str,
+    unit: str,
+    **kwargs: Any,
+) -> SelectorBase:
     """Instantiate a selector by algorithm name.
 
     Args:
@@ -155,19 +169,22 @@ def _make_selector(algorithm: str, unit: str, **kwargs) -> SelectorBase:
         ImportError: If the algorithm requires an uninstalled package.
     """
     if algorithm in _CORE_ALGORITHMS:
-        cls = _CORE_ALGORITHMS[algorithm]
-        return cls(unit=unit, **kwargs)
+        core_cls = _CORE_ALGORITHMS[algorithm]
+        return core_cls(unit=unit, **kwargs)
 
     if algorithm in _OPTIONAL_ALGORITHMS:
         class_name, pkg, install_hint = _OPTIONAL_ALGORITHMS[algorithm]
         # Check if the class is available in this module's namespace
-        cls = globals().get(class_name)
-        if cls is None:
+        optional_cls = cast(
+            type[SelectorBase] | None,
+            globals().get(class_name),
+        )
+        if optional_cls is None:
             raise ImportError(
                 f"Algorithm {algorithm!r} requires {pkg}. "
                 f"Install with: pip install {install_hint}"
             )
-        return cls(unit=unit, **kwargs)
+        return optional_cls(unit=unit, **kwargs)
 
     all_algorithms = sorted(set(_CORE_ALGORITHMS) | set(_OPTIONAL_ALGORITHMS))
     raise ValueError(

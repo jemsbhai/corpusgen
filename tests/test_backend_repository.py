@@ -151,6 +151,41 @@ class TestConstructionHuggingFace:
         assert backend.pool_size <= 2
 
     @patch("corpusgen.generate.backends.repository._load_hf_dataset")
+    def test_from_huggingface_uses_train_from_dataset_dict(self, mock_load):
+        mock_load.return_value = {
+            "train": self._mock_dataset(),
+            "test": [{"text": "held out"}],
+        }
+
+        backend = RepositoryBackend.from_huggingface(
+            dataset_name="test/dataset",
+            language="en-us",
+        )
+
+        assert backend.pool_size == 3
+
+    @patch("corpusgen.generate.backends.repository._load_hf_dataset")
+    def test_from_huggingface_requires_ambiguous_split(self, mock_load):
+        mock_load.return_value = {
+            "validation": [{"text": "one"}],
+            "test": [{"text": "two"}],
+        }
+
+        with pytest.raises(ValueError, match="pass split"):
+            RepositoryBackend.from_huggingface(
+                dataset_name="test/dataset",
+                language="en-us",
+            )
+
+    def test_from_huggingface_rejects_nonpositive_max_samples(self):
+        with pytest.raises(ValueError, match="max_samples"):
+            RepositoryBackend.from_huggingface(
+                dataset_name="test/dataset",
+                language="en-us",
+                max_samples=0,
+            )
+
+    @patch("corpusgen.generate.backends.repository._load_hf_dataset")
     def test_from_huggingface_custom_text_column(self, mock_load):
         mock_ds = MagicMock()
         mock_ds.__iter__ = MagicMock(return_value=iter([
@@ -166,6 +201,36 @@ class TestConstructionHuggingFace:
             language="en-us",
         )
         assert backend.pool_size == 2
+
+    @patch("corpusgen.generate.backends.repository._load_hf_dataset")
+    def test_from_huggingface_rejects_missing_text_column(self, mock_load):
+        mock_ds = MagicMock()
+        mock_ds.column_names = ["sentence", "speaker_id"]
+        mock_load.return_value = mock_ds
+
+        with pytest.raises(
+            ValueError,
+            match=r"test/dataset.*text column 'text'.*sentence, speaker_id",
+        ):
+            RepositoryBackend.from_huggingface(
+                dataset_name="test/dataset",
+                text_column="text",
+                language="en-us",
+            )
+
+    @patch("corpusgen.generate.backends.repository._load_hf_dataset")
+    def test_from_huggingface_reports_missing_column_from_row(self, mock_load):
+        mock_load.return_value = [{"sentence": "hello world"}]
+
+        with pytest.raises(
+            ValueError,
+            match=r"test/dataset.*text column 'text'.*row 0.*sentence",
+        ):
+            RepositoryBackend.from_huggingface(
+                dataset_name="test/dataset",
+                text_column="text",
+                language="en-us",
+            )
 
     def test_from_huggingface_missing_dependency(self):
         """Raises ImportError if datasets not installed."""

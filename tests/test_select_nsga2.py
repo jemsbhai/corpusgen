@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import numpy as np
 import pytest
 
 pymoo = pytest.importorskip("pymoo")
@@ -123,6 +126,52 @@ class TestNSGA2Selector:
         )
         assert result.num_selected <= 2
 
+    def test_zero_target_coverage_selects_nothing(
+        self,
+        candidates,
+        candidate_phonemes,
+        phoneme_target,
+    ):
+        selector = NSGA2Selector(population_size=20, n_generations=30, seed=42)
+        result = selector.select(
+            candidates,
+            candidate_phonemes,
+            phoneme_target,
+            target_coverage=0.0,
+        )
+        assert result.selected_indices == []
+        assert result.coverage == 0.0
+
+    def test_partial_target_uses_smallest_qualifying_pareto_solution(
+        self,
+        monkeypatch,
+    ):
+        from corpusgen.select import nsga2 as nsga2_module
+
+        monkeypatch.setattr(
+            nsga2_module,
+            "pymoo_minimize",
+            lambda *args, **kwargs: SimpleNamespace(
+                X=np.array(
+                    [
+                        [1, 0, 0],
+                        [1, 1, 0],
+                        [1, 1, 1],
+                    ]
+                )
+            ),
+        )
+        selector = NSGA2Selector(population_size=4, n_generations=2, seed=42)
+        result = selector.select(
+            ["one", "two", "three"],
+            [["a"], ["b"], ["c"]],
+            {"a", "b", "c"},
+            target_coverage=0.6,
+        )
+
+        assert result.selected_indices == [0, 1]
+        assert result.coverage == pytest.approx(2 / 3)
+
     def test_empty_candidates(self, phoneme_target):
         selector = NSGA2Selector(population_size=20, n_generations=30, seed=42)
         result = selector.select([], [], phoneme_target)
@@ -159,6 +208,14 @@ class TestNSGA2Selector:
         # Pareto front entries should include kl_divergence
         for entry in result.metadata["pareto_front"]:
             assert "kl_divergence" in entry
+
+    @pytest.mark.parametrize(
+        "target_distribution",
+        [{}, {"a": 0.0}, {"a": -1.0}, {"a": float("nan")}, {"a": float("inf")}],
+    )
+    def test_invalid_target_distribution_rejected(self, target_distribution):
+        with pytest.raises(ValueError, match="target_distribution|positive"):
+            NSGA2Selector(target_distribution=target_distribution)
 
     def test_diphone_unit(self):
         target = {"a-b", "b-c"}

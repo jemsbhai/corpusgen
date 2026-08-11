@@ -101,6 +101,27 @@ class TestConstruction:
         assert scorer.phonotactic_weight == 0.0
         assert scorer.fluency_weight == 0.0
 
+    @pytest.mark.parametrize(
+        ("weight_name", "invalid_weight"),
+        [
+            ("coverage_weight", -1.0),
+            ("phonotactic_weight", float("nan")),
+            ("fluency_weight", float("inf")),
+            ("readability_weight", float("-inf")),
+        ],
+    )
+    def test_invalid_composite_weights_rejected(
+        self,
+        simple_inventory,
+        weight_name,
+        invalid_weight,
+    ):
+        with pytest.raises(ValueError, match=f"{weight_name}.*finite"):
+            PhoneticScorer(
+                targets=simple_inventory,
+                **{weight_name: invalid_weight},
+            )
+
     def test_with_phonotactic_hook(self, simple_inventory):
         def phono_fn(phonemes):
             return 0.9

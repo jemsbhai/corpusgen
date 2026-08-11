@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import warnings
+
 import pytest
 
-pulp = pytest.importorskip("pulp")
-
-from corpusgen.select.ilp import ILPSelector
+import corpusgen.select.ilp as ilp_module
 from corpusgen.select.greedy import GreedySelector
+from corpusgen.select.ilp import ILPSelector
 from corpusgen.select.result import SelectionResult
+
+pulp = pytest.importorskip("pulp")
 
 
 @pytest.fixture
@@ -34,6 +37,77 @@ def candidate_phonemes() -> list[list[str]]:
 
 class TestILPSelector:
     """Tests for the ILP exact selection algorithm."""
+
+    def test_pulp_33_apis_do_not_emit_deprecation_warnings(self):
+        selector = ILPSelector()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            result = selector.select(["s0"], [["a"]], {"a"})
+
+        assert result.coverage == 1.0
+
+    def test_binary_variable_falls_back_to_pulp_2_api(self, monkeypatch):
+        sentinel = object()
+        calls = []
+
+        def fake_lp_variable(name, *, cat):
+            calls.append((name, cat))
+            return sentinel
+
+        monkeypatch.setattr(ilp_module.pulp, "LpVariable", fake_lp_variable)
+
+        result = ilp_module._add_binary_variable(object(), "x_0")
+
+        assert result is sentinel
+        assert calls == [("x_0", ilp_module.pulp.LpBinary)]
+
+    def test_prefers_available_coin_solver(self, monkeypatch):
+        class AvailableCoinSolver:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+            def available(self):
+                return True
+
+        def fail_bundled_solver(**kwargs):
+            pytest.fail(f"bundled solver should not be constructed: {kwargs}")
+
+        monkeypatch.setattr(ilp_module.pulp, "COIN_CMD", AvailableCoinSolver)
+        monkeypatch.setattr(ilp_module.pulp, "PULP_CBC_CMD", fail_bundled_solver)
+
+        solver = ilp_module._create_cbc_solver(12.5)
+
+        assert isinstance(solver, AvailableCoinSolver)
+        assert solver.kwargs == {"msg": False, "timeLimit": 12.5}
+
+    def test_unavailable_coin_solver_uses_quiet_bundled_fallback(self, monkeypatch):
+        class UnavailableCoinSolver:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+            def available(self):
+                return False
+
+        class BundledSolver:
+            def __init__(self, **kwargs):
+                warnings.warn(
+                    "PULP_CBC_CMD is deprecated and will be removed in PuLP 4.0. "
+                    "Install CBC separately.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                self.kwargs = kwargs
+
+        monkeypatch.setattr(ilp_module.pulp, "COIN_CMD", UnavailableCoinSolver)
+        monkeypatch.setattr(ilp_module.pulp, "PULP_CBC_CMD", BundledSolver)
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            solver = ilp_module._create_cbc_solver(None)
+
+        assert isinstance(solver, BundledSolver)
+        assert solver.kwargs == {"msg": False, "timeLimit": None}
+        assert caught == []
 
     def test_returns_selection_result(
         self, candidates, candidate_phonemes, phoneme_target

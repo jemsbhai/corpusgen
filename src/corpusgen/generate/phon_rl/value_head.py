@@ -17,8 +17,8 @@ with the LM's learned representations.
 
 from __future__ import annotations
 
-import torch
-import torch.nn as nn
+import torch  # type: ignore[import-not-found]
+import torch.nn as nn  # type: ignore[import-not-found]
 
 
 class ValueHead(nn.Module):

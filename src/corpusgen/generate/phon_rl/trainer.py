@@ -186,6 +186,7 @@ def compute_gae(
     values: Any,
     gamma: float = 1.0,
     lam: float = 0.95,
+    mask: Any | None = None,
 ) -> tuple[Any, Any]:
     """Generalized Advantage Estimation (Schulman et al., 2016).
 
@@ -198,6 +199,9 @@ def compute_gae(
         values: Value estimates, shape ``[batch, seq_len]``.
         gamma: Discount factor.
         lam: GAE lambda for bias-variance tradeoff.
+        mask: Optional boolean tensor marking valid sequence positions.
+            Invalid positions receive zero advantages and returns and
+            terminate the GAE recursion for that row.
 
     Returns:
         Tuple of (advantages, returns), each shape ``[batch, seq_len]``.
@@ -207,19 +211,67 @@ def compute_gae(
     batch_size, seq_len = rewards.shape
     advantages = torch.zeros_like(rewards)
     last_advantage = torch.zeros(batch_size, device=rewards.device)
+    if mask is None:
+        mask_bool = torch.ones_like(rewards, dtype=torch.bool)
+    else:
+        mask_bool = mask.to(device=rewards.device, dtype=torch.bool)
 
     for t in reversed(range(seq_len)):
         if t == seq_len - 1:
             next_value = torch.zeros(batch_size, device=rewards.device)
+            next_mask = torch.zeros(
+                batch_size,
+                device=rewards.device,
+                dtype=torch.bool,
+            )
         else:
-            next_value = values[:, t + 1]
+            next_mask = mask_bool[:, t + 1]
+            next_value = torch.where(
+                next_mask,
+                values[:, t + 1],
+                torch.zeros_like(values[:, t + 1]),
+            )
 
-        delta = rewards[:, t] + gamma * next_value - values[:, t]
-        last_advantage = delta + gamma * lam * last_advantage
+        current_mask = mask_bool[:, t]
+        delta = torch.where(
+            current_mask,
+            rewards[:, t] + gamma * next_value - values[:, t],
+            torch.zeros_like(rewards[:, t]),
+        )
+        propagated_advantage = torch.where(
+            next_mask,
+            last_advantage,
+            torch.zeros_like(last_advantage),
+        )
+        last_advantage = torch.where(
+            current_mask,
+            delta + gamma * lam * propagated_advantage,
+            torch.zeros_like(last_advantage),
+        )
         advantages[:, t] = last_advantage
 
-    returns = advantages + values
+    returns = torch.where(
+        mask_bool,
+        advantages + values,
+        torch.zeros_like(values),
+    )
     return advantages, returns
+
+
+def _masked_mean(values: Any, mask: Any | None = None) -> Any:
+    """Return a mean over valid positions, preserving gradients."""
+    import torch
+
+    if mask is None:
+        return values.mean()
+    mask_bool = mask.to(device=values.device, dtype=torch.bool)
+    masked_values = torch.where(
+        mask_bool,
+        values,
+        torch.zeros_like(values),
+    )
+    denominator = mask_bool.sum().clamp_min(1)
+    return masked_values.sum() / denominator
 
 
 def ppo_clip_loss(
@@ -227,6 +279,7 @@ def ppo_clip_loss(
     old_log_probs: Any,
     new_log_probs: Any,
     clip_epsilon: float = 0.2,
+    mask: Any | None = None,
 ) -> Any:
     """PPO clipped surrogate objective (Schulman et al., 2017).
 
@@ -241,6 +294,7 @@ def ppo_clip_loss(
         new_log_probs: Log probs from the current policy,
             shape ``[batch, seq_len]``.
         clip_epsilon: Clipping parameter.
+        mask: Optional boolean tensor marking valid action positions.
 
     Returns:
         Scalar loss (mean over all tokens).
@@ -253,7 +307,7 @@ def ppo_clip_loss(
     surrogate1 = ratio * advantages
     surrogate2 = clipped_ratio * advantages
 
-    return -torch.min(surrogate1, surrogate2).mean()
+    return _masked_mean(-torch.min(surrogate1, surrogate2), mask)
 
 
 # -----------------------------------------------------------------------
@@ -298,6 +352,62 @@ def _detect_device(device: str | None) -> str:
         return detected
     except ImportError:
         return "cpu"
+
+
+def _build_response_mask(
+    response_ids: Any,
+    eos_token_id: int | None,
+    pad_token_id: int | None,
+) -> Any:
+    """Build a prefix mask that includes each row's terminal EOS token.
+
+    ``generate()`` returns a rectangular tensor, padding rows that finish
+    early.  The first EOS is a generated action and remains valid; later
+    EOS/pad columns are excluded.  When padding uses a distinct token, the
+    first pad token itself is excluded.
+    """
+    import torch
+
+    mask = torch.ones_like(response_ids, dtype=torch.bool)
+    sequence_length = response_ids.shape[1]
+
+    for row_index in range(response_ids.shape[0]):
+        row = response_ids[row_index]
+        valid_length = sequence_length
+
+        if eos_token_id is not None:
+            eos_positions = torch.nonzero(
+                row == eos_token_id,
+                as_tuple=False,
+            ).flatten()
+            if eos_positions.numel() > 0:
+                valid_length = min(
+                    valid_length,
+                    int(eos_positions[0].item()) + 1,
+                )
+
+        if pad_token_id is not None and pad_token_id != eos_token_id:
+            pad_positions = torch.nonzero(
+                row == pad_token_id,
+                as_tuple=False,
+            ).flatten()
+            if pad_positions.numel() > 0:
+                valid_length = min(
+                    valid_length,
+                    int(pad_positions[0].item()),
+                )
+
+        mask[row_index, valid_length:] = False
+
+    return mask
+
+
+def _bounded_text_repr(text: str, max_length: int = 160) -> str:
+    """Return a bounded repr suitable for contextual error messages."""
+    rendered = repr(text)
+    if len(rendered) <= max_length:
+        return rendered
+    return f"{rendered[:max_length - 3]}..."
 
 
 def _load_model_and_tokenizer(
@@ -475,6 +585,7 @@ class PhonRLTrainer:
         mean_rewards: list[float] = []
         targets = self._reward.targets
         sentence_index = 0
+        g2p: Any | None = None
 
         for step in range(self._config.num_steps):
             # Get prompt
@@ -483,14 +594,24 @@ class PhonRLTrainer:
             else:
                 assert prompts is not None
                 prompt_text = prompts[step % len(prompts)]
+            prompt_source = "prompt_fn" if prompt_fn is not None else "prompts"
+            if not isinstance(prompt_text, str) or not prompt_text.strip():
+                raise ValueError(
+                    f"'{prompt_source}' must provide non-empty prompt text."
+                )
 
             # Encode prompt
             prompt_ids = self._tokenizer.encode(prompt_text)
             prompt_len = len(prompt_ids)
+            if prompt_len == 0:
+                raise ValueError(
+                    "Tokenizer produced no tokens for the non-empty prompt."
+                )
 
             # Generate response from current policy
             input_tensor = torch.tensor(
-                [prompt_ids], device=device
+                [prompt_ids] * self._config.batch_size,
+                device=device,
             )
             with torch.no_grad():
                 output_ids = self._model.generate(
@@ -501,43 +622,126 @@ class PhonRLTrainer:
                     pad_token_id=self._tokenizer.eos_token_id,
                 )
 
-            # Extract response token IDs
-            full_ids = output_ids[0]  # [total_len]
-            response_ids = full_ids[prompt_len:]
-            if len(response_ids) == 0:
+            if output_ids.ndim == 1:
+                output_ids = output_ids.unsqueeze(0)
+
+            response_len = output_ids.shape[1] - prompt_len
+            if response_len <= 0:
                 mean_rewards.append(0.0)
                 continue
 
-            # Decode and compute sentence-level reward
-            response_text = self._tokenizer.decode(
-                response_ids, skip_special_tokens=True
+            response_ids_batch = output_ids[:, prompt_len:]
+            eos_token_id = getattr(self._tokenizer, "eos_token_id", None)
+            pad_token_id = getattr(self._tokenizer, "pad_token_id", None)
+            if not isinstance(eos_token_id, int):
+                eos_token_id = None
+            if not isinstance(pad_token_id, int):
+                pad_token_id = None
+            response_mask = _build_response_mask(
+                response_ids_batch,
+                eos_token_id=eos_token_id,
+                pad_token_id=pad_token_id,
             )
-            # Use real G2P for accurate IPA phonemization.
-            # _simple_char_phonemes is ASCII-only and fails on IPA
-            # targets like ʃ, θ, ɪ — it must NOT be used here.
-            from corpusgen.g2p.manager import G2PManager
 
-            g2p = G2PManager()
-            try:
-                g2p_result = g2p.phonemize(
-                    response_text, language=self._config.language
+            # Phase 1: decode and phonemize every response without mutating
+            # coverage. A failure leaves the batch entirely uncommitted.
+            batch_rewards: list[float] = [0.0] * output_ids.shape[0]
+            pending_responses: list[tuple[int, str, list[str], int]] = []
+            for row_index in range(output_ids.shape[0]):
+                response_ids = response_ids_batch[row_index][
+                    response_mask[row_index]
+                ]
+                if response_ids.numel() == 0:
+                    continue
+                response_text = self._tokenizer.decode(
+                    response_ids, skip_special_tokens=True
                 )
-                phonemes = g2p_result.phonemes
-            except Exception:
-                phonemes = []
-            reward_result = self._reward.commit_sentence_reward(
-                phonemes=phonemes,
-                text=response_text,
-                sentence_index=sentence_index,
-            )
-            sentence_index += 1
-            step_reward = reward_result.composite_reward
+
+                phonemes: list[str]
+                if not response_text.strip():
+                    phonemes = []
+                else:
+                    # Use real G2P for accurate IPA phonemization. A backend
+                    # or language failure is a training configuration error,
+                    # not a zero-reward sample.
+                    from corpusgen.g2p.manager import G2PManager
+
+                    try:
+                        if g2p is None:
+                            g2p = G2PManager()
+                        g2p_result = g2p.phonemize(
+                            response_text, language=self._config.language
+                        )
+                        phonemes = g2p_result.phonemes
+                    except Exception as exc:
+                        raise RuntimeError(
+                            "Failed to phonemize generated response at "
+                            f"step {step}, row {row_index}, language "
+                            f"{self._config.language!r}, response "
+                            f"{_bounded_text_repr(response_text)}."
+                        ) from exc
+
+                pending_responses.append(
+                    (
+                        row_index,
+                        response_text,
+                        phonemes,
+                        sentence_index + len(pending_responses),
+                    )
+                )
+
+            # Phase 2: score sequentially against a simulated coverage set.
+            # Only commit real coverage after every scorer succeeds.
+            simulated_covered = targets.covered_units
+            scored_responses: list[tuple[list[str], int, int, float]] = []
+            for (
+                row_index,
+                response_text,
+                phonemes,
+                response_sentence_index,
+            ) in pending_responses:
+                try:
+                    reward_result = self._reward._score_sentence_against(
+                        phonemes=phonemes,
+                        text=response_text,
+                        covered_units=simulated_covered,
+                    )
+                except Exception as exc:
+                    raise RuntimeError(
+                        "Failed to score generated response at "
+                        f"step {step}, row {row_index}, language "
+                        f"{self._config.language!r}, response "
+                        f"{_bounded_text_repr(response_text)}."
+                    ) from exc
+
+                simulated_covered.update(reward_result.new_units)
+                scored_responses.append(
+                    (
+                        phonemes,
+                        response_sentence_index,
+                        row_index,
+                        reward_result.composite_reward,
+                    )
+                )
+
+            for (
+                phonemes,
+                response_sentence_index,
+                row_index,
+                composite_reward,
+            ) in scored_responses:
+                targets.update(phonemes, response_sentence_index)
+                batch_rewards[row_index] = composite_reward
+            sentence_index += len(scored_responses)
+
+            step_reward = sum(batch_rewards) / len(batch_rewards)
 
             # --- PPO update ---
             policy_loss_val = self._ppo_step(
-                full_ids=full_ids.unsqueeze(0),
+                full_ids=output_ids,
                 prompt_len=prompt_len,
-                sentence_reward=step_reward,
+                sentence_reward=batch_rewards,
+                response_mask=response_mask,
             )
 
             mean_rewards.append(step_reward)
@@ -560,12 +764,15 @@ class PhonRLTrainer:
             )
 
         self._initialized = True
+        checkpoint_path = self._config.output_dir
+        if checkpoint_path is not None:
+            self.save_checkpoint(checkpoint_path)
 
         return TrainingResult(
             mean_rewards=mean_rewards,
             total_steps=self._config.num_steps,
             final_coverage=targets.coverage,
-            checkpoint_path=None,
+            checkpoint_path=checkpoint_path,
         )
 
     # -------------------------------------------------------------------
@@ -576,14 +783,19 @@ class PhonRLTrainer:
         self,
         full_ids: Any,
         prompt_len: int,
-        sentence_reward: float,
+        sentence_reward: float | list[float],
+        response_mask: Any | None = None,
     ) -> float:
         """Execute a single PPO update step.
 
         Args:
-            full_ids: Full token sequence [1, total_len] (prompt + response).
+            full_ids: Full token sequences
+                ``[batch_size, total_len]`` (prompt + response).
             prompt_len: Length of the prompt portion.
-            sentence_reward: Scalar sentence-level reward.
+            sentence_reward: Scalar sentence-level reward, or one reward
+                per sequence in the batch.
+            response_mask: Optional boolean tensor marking valid response
+                tokens. Defaults to all response positions for compatibility.
 
         Returns:
             Policy loss value (float) for logging.
@@ -594,7 +806,19 @@ class PhonRLTrainer:
         if response_len <= 0:
             return 0.0
 
-        response_ids = full_ids[:, prompt_len:]  # [1, response_len]
+        response_ids = full_ids[:, prompt_len:]
+        if response_mask is None:
+            response_mask = torch.ones_like(response_ids, dtype=torch.bool)
+        else:
+            response_mask = response_mask.to(
+                device=full_ids.device,
+                dtype=torch.bool,
+            )
+        if response_mask.shape != response_ids.shape:
+            raise ValueError(
+                "response_mask must match response token shape, "
+                f"got {tuple(response_mask.shape)} and {tuple(response_ids.shape)}"
+            )
 
         # --- Forward pass: old policy log probs (detached) ---
         with torch.no_grad():
@@ -616,19 +840,55 @@ class PhonRLTrainer:
             )
 
             # Value estimates from hidden states
-            hidden = old_outputs.hidden_states[-1][:, prompt_len:, :]
+            hidden = old_outputs.hidden_states[-1][:, prompt_len - 1:-1, :]
             values = self._value_head(hidden).detach()
 
         # --- Compute per-token rewards ---
         # Distribute sentence reward to last token (terminal reward)
+        batch_size = full_ids.shape[0]
+        reward_values = torch.as_tensor(
+            sentence_reward,
+            dtype=torch.float32,
+            device=full_ids.device,
+        ).reshape(-1)
+        if reward_values.numel() == 1:
+            reward_values = reward_values.expand(batch_size)
+        elif reward_values.numel() != batch_size:
+            raise ValueError(
+                "sentence_reward must be scalar or have one value per sequence, "
+                f"got {reward_values.numel()} rewards for batch size {batch_size}"
+            )
+
         per_token_rewards = torch.zeros(
-            1, response_len, device=full_ids.device
+            batch_size, response_len, device=full_ids.device
         )
-        per_token_rewards[0, -1] = sentence_reward
+        token_positions = torch.arange(
+            response_len,
+            device=full_ids.device,
+        ).expand(batch_size, -1)
+        terminal_indices = token_positions.masked_fill(
+            ~response_mask,
+            -1,
+        ).max(dim=1).values
+        valid_rows = terminal_indices >= 0
+        row_indices = torch.arange(batch_size, device=full_ids.device)[valid_rows]
+        per_token_rewards[
+            row_indices,
+            terminal_indices[valid_rows],
+        ] = reward_values[valid_rows]
 
         # KL penalty
         kl = compute_kl_penalty(old_log_probs, ref_log_probs)
-        per_token_rewards = per_token_rewards - self._config.kl_coeff * kl
+        masked_kl = torch.where(
+            response_mask,
+            kl,
+            torch.zeros_like(kl),
+        )
+        per_token_rewards = torch.where(
+            response_mask,
+            per_token_rewards - self._config.kl_coeff * masked_kl,
+            torch.zeros_like(per_token_rewards),
+        )
 
         # --- GAE ---
         advantages, returns = compute_gae(
@@ -636,11 +896,18 @@ class PhonRLTrainer:
             values,
             gamma=self._config.gae_gamma,
             lam=self._config.gae_lambda,
+            mask=response_mask,
         )
-        # Normalize advantages
-        if advantages.numel() > 1:
-            advantages = (advantages - advantages.mean()) / (
-                advantages.std() + 1e-8
+        # Normalize advantages over valid actions only.
+        valid_advantages = advantages[response_mask]
+        if valid_advantages.numel() > 1:
+            normalized = (
+                advantages - valid_advantages.mean()
+            ) / (valid_advantages.std() + 1e-8)
+            advantages = torch.where(
+                response_mask,
+                normalized,
+                torch.zeros_like(advantages),
             )
 
         # --- PPO update (forward pass with gradients) ---
@@ -658,19 +925,23 @@ class PhonRLTrainer:
             old_log_probs,
             new_log_probs,
             clip_epsilon=self._config.clip_epsilon,
+            mask=response_mask,
         )
 
         # Value loss
-        new_hidden = new_outputs.hidden_states[-1][:, prompt_len:, :]
+        new_hidden = new_outputs.hidden_states[-1][:, prompt_len - 1:-1, :]
         new_values = self._value_head(new_hidden)
-        value_loss = ((new_values - returns) ** 2).mean()
+        value_loss = _masked_mean(
+            (new_values - returns) ** 2,
+            response_mask,
+        )
 
         # Total loss
         total_loss = policy_loss + self._config.value_loss_coeff * value_loss
         total_loss.backward()
         self._optimizer.step()
 
-        return policy_loss.item()
+        return float(policy_loss.item())
 
     # -------------------------------------------------------------------
     # Save checkpoint
@@ -714,3 +985,10 @@ class PhonRLTrainer:
             )
         if prompts is not None and len(prompts) == 0:
             raise ValueError("'prompts' must not be empty.")
+        if prompts is not None and any(
+            not isinstance(prompt, str) or not prompt.strip()
+            for prompt in prompts
+        ):
+            raise ValueError(
+                "All entries in 'prompts' must be non-empty strings."
+            )

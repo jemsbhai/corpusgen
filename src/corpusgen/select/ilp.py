@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 import time
+import warnings
+from typing import Any
 
 from corpusgen.select.base import SelectorBase
 from corpusgen.select.result import SelectionResult
@@ -12,6 +14,42 @@ try:
     import pulp
 except ImportError:
     pulp = None  # type: ignore[assignment]
+
+
+def _add_binary_variable(prob: Any, name: str) -> Any:
+    """Create a binary variable through the newest available PuLP API."""
+    add_variable = getattr(prob, "add_variable", None)
+    if callable(add_variable):
+        return add_variable(name, cat=pulp.LpBinary)
+    return pulp.LpVariable(name, cat=pulp.LpBinary)
+
+
+def _create_cbc_solver(time_limit: float | None) -> Any:
+    """Return an available CBC solver across supported PuLP versions."""
+    solver_kwargs = {"msg": False, "timeLimit": time_limit}
+
+    # PuLP 3.3 deprecates its bundled CBC wrapper in favour of COIN_CMD.
+    # COIN_CMD only works when CBC was installed separately (for example via
+    # ``pulp[cbc]``), so check availability before choosing it.
+    coin_solver_type = getattr(pulp, "COIN_CMD", None)
+    if coin_solver_type is not None:
+        coin_solver = coin_solver_type(**solver_kwargs)
+        if coin_solver.available():
+            return coin_solver
+
+    # PuLP 2.x and installations without an external CBC still rely on the
+    # bundled wrapper. Suppress only its PuLP 3.3 migration warning; passing
+    # the solver explicitly prevents LpProblem.solve() from warning again.
+    bundled_solver_type = getattr(pulp, "PULP_CBC_CMD", None)
+    if bundled_solver_type is None:
+        raise RuntimeError("No CBC solver is available. Install CBC with 'pip install pulp[cbc]'.")
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"^PULP_CBC_CMD is deprecated and will be removed in PuLP 4\.0\.",
+            category=DeprecationWarning,
+        )
+        return bundled_solver_type(**solver_kwargs)
 
 
 class ILPSelector(SelectorBase):
@@ -61,6 +99,9 @@ class ILPSelector(SelectorBase):
         weights: dict[str, float] | None = None,
     ) -> SelectionResult:
         start = time.perf_counter()
+        self._validate_select_inputs(
+            candidates, candidate_phonemes, max_sentences, target_coverage, weights
+        )
 
         # Edge case: empty target
         if not target_units:
@@ -121,7 +162,7 @@ class ILPSelector(SelectorBase):
 
         # Binary decision variables: x[i] = 1 if candidate i is selected
         x = [
-            pulp.LpVariable(f"x_{i}", cat=pulp.LpBinary)
+            _add_binary_variable(prob, f"x_{i}")
             for i in range(n_candidates)
         ]
 
@@ -136,7 +177,7 @@ class ILPSelector(SelectorBase):
         if required_covered < len(coverable_target):
             # Binary variable y[j] = 1 if unit j is covered
             y = [
-                pulp.LpVariable(f"y_{j}", cat=pulp.LpBinary)
+                _add_binary_variable(prob, f"y_{j}")
                 for j in range(len(unit_list))
             ]
 
@@ -175,10 +216,7 @@ class ILPSelector(SelectorBase):
                     prob += pulp.lpSum(x[i] for i in covering) >= 1
 
         # Solve
-        solver = pulp.PULP_CBC_CMD(
-            msg=0,
-            timeLimit=self._time_limit,
-        )
+        solver = _create_cbc_solver(self._time_limit)
         prob.solve(solver)
 
         solver_status = pulp.LpStatus[prob.status]
@@ -212,4 +250,3 @@ class ILPSelector(SelectorBase):
                 "solver_status": solver_status,
             },
         )
-

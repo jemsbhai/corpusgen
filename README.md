@@ -47,18 +47,21 @@
 <details>
 <summary><strong>Windows</strong></summary>
 
-1. Download the latest `.msi` installer from [espeak-ng releases](https://github.com/espeak-ng/espeak-ng/releases)
-2. Run the installer (default path: `C:\Program Files\eSpeak NG\`)
-3. Set the environment variable so Python can find the shared library:
+1. Download the `.msi` installer matching your Python architecture from [espeak-ng releases](https://github.com/espeak-ng/espeak-ng/releases)
+2. Run the installer (normally `C:\Program Files\eSpeak NG\` for 64-bit or
+   `C:\Program Files (x86)\eSpeak NG\` for 32-bit)
+3. The default DLL path is detected automatically. If you install elsewhere,
+   set the shared-library override:
 
 ```powershell
 [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY", "C:\Program Files\eSpeak NG\libespeak-ng.dll", "User")
 ```
 
-4. Restart your terminal and verify:
+4. Restart your terminal and verify both the executable and Python backend:
 
 ```powershell
 espeak-ng --version
+python -c "from corpusgen.g2p import G2PManager; result = G2PManager().phonemize('hello'); print(len(result.phonemes), 'phonemes')"
 ```
 
 </details>
@@ -90,16 +93,18 @@ RUN apt-get update && apt-get install -y espeak-ng && rm -rf /var/lib/apt/lists/
 
 </details>
 
-### PHOIBLE data (recommended)
+### PHOIBLE data (required for inventory-based features)
 
-To use PHOIBLE phoneme inventories (2,186 languages), download the data on first use:
+The `inventory` command and PHOIBLE-targeted generation require the pinned
+PHOIBLE inventory dataset. Download and checksum-verify it once:
 
 ```python
 from corpusgen.inventory import PhoibleDataset
 PhoibleDataset().download()  # cached at ~/.corpusgen/phoible.csv (~24 MB)
 ```
 
-This only needs to be done once.
+This only needs to be done once. Evaluation can instead derive targets from
+observed phonemes and does not require PHOIBLE data.
 
 ## Installation
 
@@ -122,20 +127,22 @@ poetry run pytest
 
 For Phon-RL training and Phon-DATG logit steering with local models:
 
+For NVIDIA acceleration, use the official
+[PyTorch installation selector](https://pytorch.org/get-started/locally/) to
+choose the build matching your OS and driver. Run its generated command inside
+the Poetry environment by replacing the leading `pip install` (or `pip3
+install`) with `poetry run python -m pip install`. Supported CUDA build indexes
+change over time.
+
 ```bash
 # 1. Install corpusgen with local model dependencies
 poetry install --with local
 
-# 2. IMPORTANT: Replace CPU torch with CUDA torch for GPU acceleration.
-#    The default Poetry install pulls CPU-only torch from PyPI.
-#    For NVIDIA GPUs (CUDA 12.1):
-pip install torch --index-url https://download.pytorch.org/whl/cu121 --force-reinstall
+# 2. Install the GPU-enabled PyTorch build using the selector-generated
+#    command as described above, then verify GPU access:
 
-# Verify GPU is available:
-python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
+poetry run python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"N/A\"}')"
 ```
-
-> **Note:** Check [pytorch.org/get-started](https://pytorch.org/get-started/locally/) for the correct CUDA version matching your driver. Common options: `cu118`, `cu121`, `cu124`.
 
 ## Quick Start
 
@@ -626,7 +633,7 @@ For reproducible results across machines:
 1. **Pin corpusgen version** in your dependency file
 2. **Pin espeak-ng version**: Record `espeak-ng --version` in experiment logs
 3. **Use `poetry.lock`**: Pins all transitive dependencies
-4. **Record PHOIBLE version**: Note the download date of `~/.corpusgen/phoible.csv`
+4. **Record PHOIBLE version**: corpusgen downloads a pinned, checksum-verified revision; record your corpusgen version alongside experiments
 
 ## Citation
 

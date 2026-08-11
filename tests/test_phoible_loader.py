@@ -5,6 +5,7 @@ TDD RED phase. Uses a small fixture CSV that mirrors PHOIBLE's exact
 """
 
 import csv
+import hashlib
 import json
 import os
 import textwrap
@@ -14,6 +15,7 @@ import pytest
 
 from corpusgen.inventory.models import Segment, Inventory, FEATURE_NAMES
 from corpusgen.inventory.phoible import PhoibleDataset
+import corpusgen.inventory.phoible as phoible_module
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +192,50 @@ class TestPhoibleDatasetLoading:
         ds = PhoibleDataset(cache_dir=tmp_path / "nonexistent")
         with pytest.raises(FileNotFoundError):
             ds.load()
+
+    def test_stale_default_cache_requires_refresh(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(phoible_module.Path, "home", lambda: tmp_path)
+        cache_dir = tmp_path / ".corpusgen"
+        cache_dir.mkdir()
+        (cache_dir / "phoible.csv").write_bytes(b"old unpinned data")
+
+        ds = PhoibleDataset()
+
+        with pytest.raises(RuntimeError, match="pinned revision.*download"):
+            ds.load()
+
+    def test_download_verifies_checksum_and_installs_atomically(
+        self, tmp_path, monkeypatch
+    ):
+        payload = b"InventoryID,Phoneme\n1,p\n"
+        expected = hashlib.sha256(payload).hexdigest()
+        monkeypatch.setattr(phoible_module, "_PHOIBLE_CSV_SHA256", expected)
+
+        def fake_download(url, destination):
+            Path(destination).write_bytes(payload)
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_download)
+        ds = PhoibleDataset(cache_dir=tmp_path)
+
+        ds.download()
+
+        assert ds.csv_path.read_bytes() == payload
+        assert not list(tmp_path.glob("*.tmp"))
+
+    def test_download_rejects_corrupt_content(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(phoible_module, "_PHOIBLE_CSV_SHA256", "0" * 64)
+
+        def fake_download(url, destination):
+            Path(destination).write_bytes(b"corrupt")
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_download)
+        ds = PhoibleDataset(cache_dir=tmp_path)
+
+        with pytest.raises(RuntimeError, match="checksum mismatch"):
+            ds.download()
+
+        assert not ds.csv_exists
+        assert not list(tmp_path.glob("*.tmp"))
 
 
 # ---------------------------------------------------------------------------

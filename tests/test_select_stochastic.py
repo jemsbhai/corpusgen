@@ -124,6 +124,29 @@ class TestStochasticGreedySelector:
         result = selector.select(cands, phons, phoneme_target, max_sentences=1)
         assert result.num_selected == 1
 
+    def test_zero_max_sentences_selects_nothing(
+        self, candidates, candidate_phonemes, phoneme_target
+    ):
+        selector = StochasticGreedySelector(epsilon=0.1, seed=42)
+        result = selector.select(
+            candidates,
+            candidate_phonemes,
+            phoneme_target,
+            max_sentences=0,
+        )
+        assert result.num_selected == 0
+        assert result.coverage == 0.0
+
+    def test_zero_weight_candidates_are_rejected(self):
+        selector = StochasticGreedySelector(epsilon=0.5, seed=42)
+        with pytest.raises(ValueError, match="positive and finite"):
+            selector.select(
+                ["s0", "s1"],
+                [["a"], ["b"]],
+                {"a", "b"},
+                weights={"a": 0.0, "b": 0.0},
+            )
+
     def test_target_coverage_early_stop(
         self, candidates, candidate_phonemes, phoneme_target
     ):

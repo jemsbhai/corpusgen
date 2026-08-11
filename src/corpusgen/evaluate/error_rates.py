@@ -177,7 +177,16 @@ def sentence_error_rate(
 
     Returns:
         SER as a float in [0.0, 1.0].  0.0 if all match.
+
+    Raises:
+        ValueError: If references and hypotheses have different lengths.
     """
+    if len(references) != len(hypotheses):
+        raise ValueError(
+            "references and hypotheses must have same length, "
+            f"got {len(references)} and {len(hypotheses)}"
+        )
+
     if len(references) == 0:
         return 0.0
 
@@ -294,10 +303,13 @@ def compute_error_rates(
             f"got {len(references)} and {len(hypotheses)}"
         )
 
-    has_phonemes = (
-        reference_phonemes is not None and hypothesis_phonemes is not None
-    )
-    if has_phonemes:
+    if (reference_phonemes is None) != (hypothesis_phonemes is None):
+        raise ValueError(
+            "reference_phonemes and hypothesis_phonemes must be provided together"
+        )
+
+    phoneme_inputs: tuple[list[list[str]], list[list[str]]] | None = None
+    if reference_phonemes is not None and hypothesis_phonemes is not None:
         if len(reference_phonemes) != len(references):
             raise ValueError(
                 f"reference_phonemes must have same length as references, "
@@ -308,6 +320,7 @@ def compute_error_rates(
                 f"hypothesis_phonemes must have same length as hypotheses, "
                 f"got {len(hypothesis_phonemes)} and {len(hypotheses)}"
             )
+        phoneme_inputs = (reference_phonemes, hypothesis_phonemes)
 
     n = len(references)
 
@@ -356,9 +369,9 @@ def compute_error_rates(
 
         # Phoneme level
         sent_per: float | None = None
-        if has_phonemes:
-            ref_ph = reference_phonemes[i]
-            hyp_ph = hypothesis_phonemes[i]
+        if phoneme_inputs is not None:
+            ref_ph = phoneme_inputs[0][i]
+            hyp_ph = phoneme_inputs[1][i]
             p_edits = edit_distance(ref_ph, hyp_ph)
             p_ref_len = len(ref_ph)
             total_phoneme_edits += p_edits
@@ -379,17 +392,20 @@ def compute_error_rates(
     # Corpus-level micro-averages
     corpus_wer = (
         total_word_edits / total_word_ref_len
-        if total_word_ref_len > 0 else 0.0
+        if total_word_ref_len > 0
+        else (0.0 if total_word_edits == 0 else float("inf"))
     )
     corpus_cer = (
         total_char_edits / total_char_ref_len
-        if total_char_ref_len > 0 else 0.0
+        if total_char_ref_len > 0
+        else (0.0 if total_char_edits == 0 else float("inf"))
     )
     corpus_per: float | None = None
-    if has_phonemes:
+    if phoneme_inputs is not None:
         corpus_per = (
             total_phoneme_edits / total_phoneme_ref_len
-            if total_phoneme_ref_len > 0 else 0.0
+            if total_phoneme_ref_len > 0
+            else (0.0 if total_phoneme_edits == 0 else float("inf"))
         )
 
     corpus_ser = sentence_error_rate(

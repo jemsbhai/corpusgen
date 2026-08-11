@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any, cast
 
 import click
 
@@ -12,12 +14,18 @@ from corpusgen import get_inventory
 from corpusgen.generate.backends.llm_api import LLMBackend
 from corpusgen.generate.backends.local import LocalBackend
 from corpusgen.generate.backends.repository import RepositoryBackend
-from corpusgen.generate.phon_ctg.loop import GenerationLoop, StoppingCriteria
+from corpusgen.generate.guidance import GuidanceStrategy
+from corpusgen.generate.phon_ctg.loop import (
+    GenerationBackend,
+    GenerationLoop,
+    StoppingCriteria,
+)
 from corpusgen.generate.phon_ctg.scorer import PhoneticScorer
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
 from corpusgen.generate.phon_datg import DATGStrategy
 from corpusgen.generate.phon_rl.policy import PhonRLStrategy
 from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
+from corpusgen.weights import validate_component_weights, validate_unit_weights
 
 
 def _parse_weights(value: str) -> dict[str, float]:
@@ -43,8 +51,10 @@ def _parse_weights(value: str) -> dict[str, float]:
                 raise click.BadParameter(
                     f"Weights JSON file must contain a dict, got {type(data).__name__}."
                 )
-            return {str(k): float(v) for k, v in data.items()}
-        except (json.JSONDecodeError, ValueError) as exc:
+            file_weights = {str(k): float(v) for k, v in data.items()}
+            validate_unit_weights(file_weights)
+            return file_weights
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
             raise click.BadParameter(f"Invalid weights JSON file: {exc}")
 
     # Parse inline format: "p:2.0,b:1.5,ʃ:3.0"
@@ -65,6 +75,10 @@ def _parse_weights(value: str) -> dict[str, float]:
             raise click.BadParameter(
                 f"Invalid weight value for {key!r}: {val!r}. Must be a number."
             )
+    try:
+        validate_unit_weights(weights)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc)) from exc
     return weights
 
 
@@ -88,6 +102,35 @@ def _resolve_prompt_template(value: str | None) -> str | None:
         return path.read_text(encoding="utf-8").strip()
 
     return value
+
+
+def _build_stopping_criteria(
+    target_coverage: float,
+    max_sentences: int | None,
+    max_iterations: int | None,
+    timeout: float | None,
+) -> StoppingCriteria:
+    """Build stopping criteria and attach validation errors to CLI options."""
+    try:
+        return StoppingCriteria(
+            target_coverage=target_coverage,
+            max_sentences=max_sentences,
+            max_iterations=max_iterations,
+            timeout_seconds=timeout,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        field, separator, detail = message.partition(" ")
+        param_hint = {
+            "target_coverage": "--target-coverage",
+            "max_sentences": "--max-sentences",
+            "max_iterations": "--max-iterations",
+            "timeout_seconds": "--timeout",
+        }.get(field)
+        raise click.BadParameter(
+            detail if param_hint is not None and separator else message,
+            param_hint=param_hint,
+        ) from exc
 
 
 # --- Backend-specific flag sets for validation ---
@@ -157,7 +200,9 @@ _FLAG_DISPLAY = {
     "--target", "-t",
     "target_source",
     default="phoible",
-    help='Target phoneme inventory source. Default: "phoible".',
+    help='Target phoneme inventory. Use "phoible" for the best available '
+    "inventory, or a PHOIBLE source filter such as spa, upsid, or ph. "
+    'Default: "phoible".',
 )
 @click.option(
     "--phonemes",
@@ -454,6 +499,14 @@ def generate_cmd(
         local_max_tokens=local_max_tokens,
     )
 
+    # Validate numeric stopping limits before inventory or backend work.
+    stopping = _build_stopping_criteria(
+        target_coverage=target_coverage,
+        max_sentences=max_sentences,
+        max_iterations=max_iterations,
+        timeout=timeout,
+    )
+
     # Validate dataset/file flags
     if backend == "repository" and input_file is None and dataset is None:
         click.echo(
@@ -507,6 +560,7 @@ def generate_cmd(
     _validate_scorer_flags(
         backend=backend,
         model=model,
+        coverage_weight=coverage_weight,
         phonotactic_weight=phonotactic_weight,
         phonotactic_scorer=phonotactic_scorer,
         fluency_weight=fluency_weight,
@@ -529,11 +583,14 @@ def generate_cmd(
     # 3. Build target phoneme list
     # ---------------------------------------------------------------
     try:
-        inv = get_inventory(language)
+        normalized_target = target_source.lower()
+        source = None if normalized_target == "phoible" else normalized_target
+        inv = get_inventory(language, source=source)
         target_phoneme_list = list(inv.phonemes)
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
     except KeyError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        sys.exit(1)
+        raise click.ClickException(str(exc)) from exc
 
     # Additive phonemes
     if phonemes is not None:
@@ -563,14 +620,6 @@ def generate_cmd(
         target_phonemes=target_phoneme_list,
         unit=unit,
         weights=parsed_weights,
-    )
-
-    # Stopping criteria
-    stopping = StoppingCriteria(
-        target_coverage=target_coverage,
-        max_sentences=max_sentences,
-        max_iterations=max_iterations,
-        timeout_seconds=timeout,
     )
 
     # Guidance strategy (local backend only)
@@ -664,7 +713,10 @@ def generate_cmd(
             "\n".join(gen_result.generated_sentences) + "\n",
             encoding="utf-8",
         )
-        click.echo(f"Wrote {gen_result.num_generated} sentences to {output_file}")
+        click.echo(
+            f"Wrote {gen_result.num_generated} sentences to {output_file}",
+            err=output_format == "json",
+        )
 
     # Display results
     if output_format == "json":
@@ -763,13 +815,13 @@ def _build_backend(
     local_max_tokens: int,
     device: str | None,
     quantization: str | None,
-    guidance_strategy: object | None = None,
+    guidance_strategy: GuidanceStrategy | None = None,
     dataset: str | None = None,
     text_column: str = "text",
     dataset_split: str | None = None,
     max_samples: int | None = None,
     prompt_template: str | None = None,
-):
+) -> GenerationBackend:
     """Construct the appropriate GenerationBackend."""
     if backend == "repository":
         if dataset is not None:
@@ -820,6 +872,7 @@ def _build_backend(
 def _validate_scorer_flags(
     backend: str,
     model: str | None,
+    coverage_weight: float,
     phonotactic_weight: float,
     phonotactic_scorer: str,
     fluency_weight: float,
@@ -827,6 +880,17 @@ def _validate_scorer_flags(
     fluency_model: str | None,
 ) -> None:
     """Validate scorer-related flag combinations."""
+    try:
+        validate_component_weights(
+            {
+                "coverage_weight": coverage_weight,
+                "phonotactic_weight": phonotactic_weight,
+                "fluency_weight": fluency_weight,
+            }
+        )
+    except ValueError as exc:
+        raise click.BadParameter(str(exc).replace("_", "-")) from exc
+
     if phonotactic_weight > 0.0 and phonotactic_scorer == "none":
         click.echo(
             "Error: --phonotactic-weight > 0 requires --phonotactic-scorer "
@@ -888,7 +952,7 @@ def _build_phonotactic_scorer(
     phonotactic_n: int,
     phonotactic_corpus: str | None,
     language: str,
-):
+) -> Callable[[list[str]], float] | None:
     """Build the phonotactic scorer callable, or None."""
     if phonotactic_scorer == "none":
         return None
@@ -913,8 +977,8 @@ def _build_fluency_scorer(
     fluency_device: str | None,
     backend: str,
     model: str | None,
-    backend_obj: object | None = None,
-):
+    backend_obj: GenerationBackend | None = None,
+) -> Callable[[str | None], float] | None:
     """Build the fluency scorer callable, or None.
 
     When the local backend is used and the fluency model matches the
@@ -936,10 +1000,11 @@ def _build_fluency_scorer(
         and (fluency_model is None or fluency_model == model)
         and hasattr(backend_obj, "_ensure_loaded")
     ):
-        backend_obj._ensure_loaded()
+        shareable_backend = cast(LocalBackend, backend_obj)
+        shareable_backend._ensure_loaded()
         return PerplexityFluencyScorer.from_model(
-            backend_obj._model,
-            backend_obj._tokenizer,
+            shareable_backend._model,
+            shareable_backend._tokenizer,
         )
 
     return PerplexityFluencyScorer(
@@ -959,17 +1024,15 @@ def _build_guidance_strategy(
     datg_freq_threshold: int,
     datg_batch_size: int,
     rl_adapter_path: str | None,
-):
+) -> GuidanceStrategy | None:
     """Build the guidance strategy, or None."""
     if guidance == "none":
         return None
 
     # Load config file if provided (overrides flat flags)
-    config: dict = {}
+    config: dict[str, Any] = {}
     if guidance_config is not None:
-        config = json.loads(
-            Path(guidance_config).read_text(encoding="utf-8")
-        )
+        config = _parse_guidance_config(guidance_config)
 
     if guidance == "datg":
         kwargs = {
@@ -988,3 +1051,31 @@ def _build_guidance_strategy(
         return PhonRLStrategy(adapter_path=adapter)
 
     raise ValueError(f"Unknown guidance strategy: {guidance!r}")
+
+
+def _parse_guidance_config(value: str) -> dict[str, Any]:
+    """Load a guidance JSON object and report file errors through Click."""
+    path = Path(value)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise click.BadParameter(
+            f"Could not read guidance config {value!r}: {exc}",
+            param_hint="--guidance-config",
+        ) from exc
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise click.BadParameter(
+            f"Invalid guidance config JSON in {value!r}: {exc}",
+            param_hint="--guidance-config",
+        ) from exc
+
+    if not isinstance(data, dict):
+        raise click.BadParameter(
+            "Guidance config must contain a JSON object, "
+            f"got {type(data).__name__}.",
+            param_hint="--guidance-config",
+        )
+    return data

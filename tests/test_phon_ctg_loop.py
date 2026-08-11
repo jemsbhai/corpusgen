@@ -144,6 +144,34 @@ class TestStoppingCriteria:
         with pytest.raises(ValueError):
             StoppingCriteria(target_coverage=-0.1)
 
+    @pytest.mark.parametrize(
+        ("field", "kwargs"),
+        [
+            ("max_sentences", {"max_sentences": -1}),
+            ("max_iterations", {"max_iterations": -1}),
+            ("timeout_seconds", {"timeout_seconds": -0.1}),
+        ],
+    )
+    def test_negative_limits_rejected(self, field, kwargs):
+        with pytest.raises(ValueError, match=field):
+            StoppingCriteria(**kwargs)
+
+    def test_zero_limits_are_valid(self):
+        criteria = StoppingCriteria(
+            target_coverage=0.0,
+            max_sentences=0,
+            max_iterations=0,
+            timeout_seconds=0.0,
+        )
+        assert criteria.max_sentences == 0
+        assert criteria.max_iterations == 0
+        assert criteria.timeout_seconds == 0.0
+
+    @pytest.mark.parametrize("timeout", [float("nan"), float("inf")])
+    def test_nonfinite_timeout_rejected(self, timeout):
+        with pytest.raises(ValueError, match="finite"):
+            StoppingCriteria(timeout_seconds=timeout)
+
 
 # ---------------------------------------------------------------------------
 # GenerationResult

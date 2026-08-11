@@ -52,6 +52,17 @@ class TestStandaloneConstruction:
         with pytest.raises(ValueError, match="Invalid unit"):
             PhoneticTargetInventory(target_phonemes=["p"], unit="quadphone")
 
+    @pytest.mark.parametrize(
+        "invalid_weight",
+        [0.0, -1.0, float("nan"), float("inf"), float("-inf")],
+    )
+    def test_invalid_priority_weights_rejected(self, invalid_weight):
+        with pytest.raises(ValueError, match="positive and finite"):
+            PhoneticTargetInventory(
+                target_phonemes=["p"],
+                weights={"p": invalid_weight},
+            )
+
 
 # ---------------------------------------------------------------------------
 # Construction: wrap mode (existing tracker)

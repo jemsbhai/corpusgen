@@ -52,6 +52,26 @@ class TestGreedySelector:
         selector = GreedySelector()
         assert selector.algorithm_name == "greedy"
 
+    @pytest.mark.parametrize(
+        "invalid_weight",
+        [0.0, -1.0, float("nan"), float("inf")],
+    )
+    def test_invalid_weights_rejected(
+        self,
+        candidates,
+        candidate_phonemes,
+        phoneme_target,
+        invalid_weight,
+    ):
+        selector = GreedySelector()
+        with pytest.raises(ValueError, match="positive and finite"):
+            selector.select(
+                candidates,
+                candidate_phonemes,
+                phoneme_target,
+                weights={"a": invalid_weight},
+            )
+
     def test_full_coverage_single_sentence(
         self, candidates, candidate_phonemes, phoneme_target
     ):
@@ -145,6 +165,22 @@ class TestGreedySelector:
         result = selector.select(["s1"], [["a"]], set())
         assert result.coverage == 1.0
         assert result.num_selected == 0
+
+    def test_candidate_phoneme_length_mismatch_raises(self):
+        selector = GreedySelector()
+        with pytest.raises(ValueError, match="candidate_phonemes length"):
+            selector.select(["s1"], [], set())
+
+    @pytest.mark.parametrize("target_coverage", [-0.1, 1.1])
+    def test_invalid_target_coverage_raises(self, target_coverage):
+        selector = GreedySelector()
+        with pytest.raises(ValueError, match="target_coverage"):
+            selector.select([], [], set(), target_coverage=target_coverage)
+
+    def test_negative_max_sentences_raises(self):
+        selector = GreedySelector()
+        with pytest.raises(ValueError, match="max_sentences"):
+            selector.select([], [], set(), max_sentences=-1)
 
     def test_elapsed_seconds_positive(
         self, candidates, candidate_phonemes, phoneme_target

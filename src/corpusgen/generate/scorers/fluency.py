@@ -37,7 +37,7 @@ def _load_tokenizer(model_name: str) -> Any:
     Raises:
         ImportError: If transformers is not installed.
     """
-    from transformers import AutoTokenizer  # type: ignore[import-untyped]
+    from transformers import AutoTokenizer  # type: ignore[import-not-found, import-untyped]
 
     return AutoTokenizer.from_pretrained(model_name)
 
@@ -48,7 +48,7 @@ def _load_model(model_name: str, device: str) -> Any:
     Raises:
         ImportError: If transformers or torch is not installed.
     """
-    from transformers import AutoModelForCausalLM  # type: ignore[import-untyped]
+    from transformers import AutoModelForCausalLM  # type: ignore[import-not-found, import-untyped]
 
     model = AutoModelForCausalLM.from_pretrained(model_name)
     model = model.to(device)
@@ -59,7 +59,7 @@ def _load_model(model_name: str, device: str) -> Any:
 def _detect_device() -> str:
     """Auto-detect the best available device."""
     try:
-        import torch
+        import torch  # type: ignore[import-not-found]
 
         return "cuda" if torch.cuda.is_available() else "cpu"
     except ImportError:
@@ -145,7 +145,7 @@ class PerplexityFluencyScorer:
         if self.is_loaded:
             return
 
-        if self._device is None:
+        if self._device is None or self._device.lower() == "auto":
             self._device = _detect_device()
 
         logger.info(
@@ -181,7 +181,7 @@ class PerplexityFluencyScorer:
 
         self._ensure_loaded()
 
-        import torch
+        import torch  # type: ignore[import-not-found]
 
         # Tokenize
         inputs = self._tokenizer(
@@ -195,7 +195,7 @@ class PerplexityFluencyScorer:
         # Compute loss (negative log-likelihood per token)
         with torch.no_grad():
             outputs = self._model(input_ids=input_ids, labels=input_ids)
-            loss = outputs.loss.item()
+            loss = float(outputs.loss.item())
 
         # loss = log(perplexity), so perplexity = exp(loss)
         # Normalize: score = 1 / (1 + loss)

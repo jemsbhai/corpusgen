@@ -201,7 +201,17 @@ def compute_text_quality_metrics(
 
     Returns:
         TextQualityMetrics with all computed fields.
+
+    Raises:
+        ValueError: If ``sentences`` and ``phoneme_sequences`` have different
+            lengths.
     """
+    if len(sentences) != len(phoneme_sequences):
+        raise ValueError(
+            "sentences and phoneme_sequences must have the same length; "
+            f"got {len(sentences)} and {len(phoneme_sequences)}"
+        )
+
     n = len(sentences)
 
     # --- Tokenize all sentences ---

@@ -193,6 +193,10 @@ class TestSentenceErrorRate:
     def test_empty(self):
         assert sentence_error_rate([], []) == _approx(0.0)
 
+    def test_mismatched_lengths_raises(self):
+        with pytest.raises(ValueError, match="same length"):
+            sentence_error_rate(["one", "two"], ["one"])
+
 
 # ---------------------------------------------------------------------------
 # 6. Corpus-level compute_error_rates
@@ -259,6 +263,21 @@ class TestComputeErrorRates:
         assert result.per is None
         assert result.cer >= 0.0
 
+    @pytest.mark.parametrize(
+        ("reference_phonemes", "hypothesis_phonemes"),
+        [([[]], None), (None, [[]])],
+    )
+    def test_requires_both_phoneme_inputs(
+        self, reference_phonemes, hypothesis_phonemes
+    ):
+        with pytest.raises(ValueError, match="must be provided together"):
+            compute_error_rates(
+                ["a"],
+                ["a"],
+                reference_phonemes=reference_phonemes,
+                hypothesis_phonemes=hypothesis_phonemes,
+            )
+
 
 # ---------------------------------------------------------------------------
 # 7. Edge cases
@@ -278,3 +297,25 @@ class TestErrorRateEdgeCases:
         assert result.ser == _approx(0.0)
         assert result.per is None
         assert result.details == []
+
+    def test_nonempty_hypothesis_with_empty_reference_is_infinite(self):
+        result = compute_error_rates(
+            [""],
+            ["inserted"],
+            reference_phonemes=[[]],
+            hypothesis_phonemes=[["a"]],
+        )
+        assert result.wer == float("inf")
+        assert result.cer == float("inf")
+        assert result.per == float("inf")
+
+    def test_empty_hypothesis_and_reference_have_zero_error(self):
+        result = compute_error_rates(
+            [""],
+            [""],
+            reference_phonemes=[[]],
+            hypothesis_phonemes=[[]],
+        )
+        assert result.wer == _approx(0.0)
+        assert result.cer == _approx(0.0)
+        assert result.per == _approx(0.0)

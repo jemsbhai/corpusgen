@@ -32,6 +32,8 @@ def inventory(language: str, source: str | None, output_format: str) -> None:
     """Show the PHOIBLE phoneme inventory for a language."""
     try:
         inv = get_inventory(language, source=source)
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise click.ClickException(str(exc)) from exc
     except KeyError as exc:
         click.echo(f"Error: Language not found: {exc}", err=True)
         sys.exit(1)

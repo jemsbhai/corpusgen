@@ -77,6 +77,11 @@ class TestConstruction:
         index = AttributeWordIndex(language="fr-fr")
         assert index.language == "fr-fr"
 
+    @pytest.mark.parametrize("batch_size", [0, -1])
+    def test_non_positive_batch_size_rejected(self, batch_size):
+        with pytest.raises(ValueError, match="batch_size"):
+            AttributeWordIndex(batch_size=batch_size)
+
     def test_not_built_initially(self):
         index = AttributeWordIndex()
         assert not index.is_built

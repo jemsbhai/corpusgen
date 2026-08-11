@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
+from corpusgen.weights import validate_component_weights
 
 logger = logging.getLogger(__name__)
 
@@ -118,18 +119,13 @@ class PhoneticReward:
         fluency_weight: float = 0.0,
         language: str = "en-us",
     ) -> None:
-        if coverage_weight < 0:
-            raise ValueError(
-                f"coverage_weight must be >= 0, got {coverage_weight}"
-            )
-        if phonotactic_weight < 0:
-            raise ValueError(
-                f"phonotactic_weight must be >= 0, got {phonotactic_weight}"
-            )
-        if fluency_weight < 0:
-            raise ValueError(
-                f"fluency_weight must be >= 0, got {fluency_weight}"
-            )
+        validate_component_weights(
+            {
+                "coverage_weight": coverage_weight,
+                "phonotactic_weight": phonotactic_weight,
+                "fluency_weight": fluency_weight,
+            }
+        )
 
         self._targets = targets
         self._phonotactic_scorer = phonotactic_scorer
@@ -205,12 +201,54 @@ class PhoneticReward:
             ]
         return []
 
-    def _compute_new_units(self, phonemes: list[str]) -> set[str]:
+    def _compute_new_units(
+        self,
+        phonemes: list[str],
+        covered_units: set[str] | None = None,
+    ) -> set[str]:
         """Find which target units this phoneme sequence would newly cover."""
         units = self._extract_units(phonemes)
         target_set = self._targets.target_units
-        already_covered = self._targets.covered_units
+        already_covered = (
+            self._targets.covered_units
+            if covered_units is None
+            else covered_units
+        )
         return {u for u in units if u in target_set and u not in already_covered}
+
+    def _score_sentence_against(
+        self,
+        phonemes: list[str],
+        text: str | None,
+        covered_units: set[str],
+    ) -> RewardBreakdown:
+        """Score a sentence against an explicit coverage snapshot."""
+        new_units = self._compute_new_units(
+            phonemes,
+            covered_units=covered_units,
+        )
+        coverage_gain = len(new_units)
+
+        target_size = self._targets.target_size
+        coverage_reward = (
+            coverage_gain / target_size if target_size > 0 else 0.0
+        )
+        phonotactic_reward = self._compute_phonotactic(phonemes)
+        fluency_reward = self._compute_fluency(text)
+        composite = (
+            self._coverage_weight * coverage_reward
+            + self._phonotactic_weight * phonotactic_reward
+            + self._fluency_weight * fluency_reward
+        )
+
+        return RewardBreakdown(
+            coverage_reward=coverage_reward,
+            phonotactic_reward=phonotactic_reward,
+            fluency_reward=fluency_reward,
+            composite_reward=composite,
+            new_units=new_units,
+            coverage_gain=coverage_gain,
+        )
 
     # -------------------------------------------------------------------
     # Internal: compute fluency score
@@ -258,32 +296,10 @@ class PhoneticReward:
         Returns:
             RewardBreakdown with all score components.
         """
-        new_units = self._compute_new_units(phonemes)
-        coverage_gain = len(new_units)
-
-        # Normalize coverage by target size
-        target_size = self._targets.target_size
-        if target_size > 0:
-            coverage_reward = coverage_gain / target_size
-        else:
-            coverage_reward = 0.0
-
-        phonotactic_reward = self._compute_phonotactic(phonemes)
-        fluency_reward = self._compute_fluency(text)
-
-        composite = (
-            self._coverage_weight * coverage_reward
-            + self._phonotactic_weight * phonotactic_reward
-            + self._fluency_weight * fluency_reward
-        )
-
-        return RewardBreakdown(
-            coverage_reward=coverage_reward,
-            phonotactic_reward=phonotactic_reward,
-            fluency_reward=fluency_reward,
-            composite_reward=composite,
-            new_units=new_units,
-            coverage_gain=coverage_gain,
+        return self._score_sentence_against(
+            phonemes=phonemes,
+            text=text,
+            covered_units=self._targets.covered_units,
         )
 
     # -------------------------------------------------------------------
@@ -323,10 +339,10 @@ class PhoneticReward:
     ) -> TokenRewardResult:
         """Compute sparse per-token rewards at word boundaries.
 
-        Decodes tokens incrementally, detects word boundaries (tokens
-        ending in whitespace or being the final token), phonemizes
-        completed words, and assigns the coverage reward for each word
-        to the boundary token that completed it. Non-boundary tokens
+        Decodes tokens incrementally, detects word boundaries from trailing
+        whitespace, leading whitespace/word markers, or the final token,
+        phonemizes completed words, and assigns the coverage reward for each
+        word to the boundary token that completed it. Non-boundary tokens
         receive 0.0.
 
         This provides denser learning signal than pure sentence-level
@@ -347,57 +363,97 @@ class PhoneticReward:
                 words_phonemized=[],
             )
 
-        # Decode each token to its string representation
+        # Keep decoded text for word assembly/G2P, but retain raw token
+        # strings for boundary markers that decode(single_id) may strip.
         token_strings = [
             tokenizer.decode(tid, skip_special_tokens=True)
             for tid in token_ids
         ]
+        convert_id = getattr(tokenizer, "convert_ids_to_tokens", None)
+        raw_token_strings: list[str] = []
+        for token_id, decoded_token in zip(token_ids, token_strings):
+            raw_token = (
+                convert_id(token_id)
+                if callable(convert_id)
+                else decoded_token
+            )
+            raw_token_strings.append(
+                raw_token if isinstance(raw_token, str) else decoded_token
+            )
 
         # Accumulate tokens into words, detecting boundaries
         per_token_rewards: list[float] = [0.0] * len(token_ids)
         word_boundaries: list[int] = []
         words_phonemized: list[str] = []
         current_word_tokens: list[str] = []
+        rewarded_units: set[str] = set()
+        g2p: Any | None = None
 
         target_size = self._targets.target_size
 
-        for i, tok_str in enumerate(token_strings):
+        def score_current_word(boundary_index: int) -> None:
+            nonlocal g2p
+
+            word = "".join(current_word_tokens).strip()
+            current_word_tokens.clear()
+            if not word:
+                return
+
+            word_boundaries.append(boundary_index)
+            words_phonemized.append(word)
+
+            from corpusgen.g2p.manager import G2PManager
+
+            try:
+                if g2p is None:
+                    g2p = G2PManager()
+                g2p_result = g2p.phonemize(
+                    word, language=self._language
+                )
+                word_phonemes = g2p_result.phonemes
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to phonemize token-level word {word!r} "
+                    f"for language {self._language!r}."
+                ) from exc
+
+            new_units = self._compute_new_units(word_phonemes) - rewarded_units
+            rewarded_units.update(new_units)
+            if target_size > 0 and new_units:
+                per_token_rewards[boundary_index] = len(new_units) / target_size
+
+        leading_boundary_markers = ("▁", "Ġ")
+
+        for i, (tok_str, raw_tok_str) in enumerate(
+            zip(token_strings, raw_token_strings)
+        ):
+            starts_with_space = bool(
+                (tok_str and tok_str[0].isspace())
+                or (raw_tok_str and raw_tok_str[0].isspace())
+            )
+            starts_with_marker = (
+                tok_str.startswith(leading_boundary_markers)
+                or raw_tok_str.startswith(leading_boundary_markers)
+            )
+
+            # A leading boundary means the preceding token completed the
+            # word accumulated so far.
+            if (starts_with_space or starts_with_marker) and current_word_tokens:
+                score_current_word(i - 1)
+
+            if tok_str.startswith(leading_boundary_markers):
+                tok_str = tok_str[1:]
+            if starts_with_space:
+                tok_str = tok_str.lstrip()
             current_word_tokens.append(tok_str)
 
-            # A word boundary occurs when:
-            # 1. The token ends with whitespace, OR
-            # 2. This is the last token in the sequence
             is_last = i == len(token_strings) - 1
-            ends_with_space = bool(tok_str and tok_str[-1] in (" ", "\t", "\n"))
-
+            ends_with_space = bool(
+                (tok_str and tok_str[-1].isspace())
+                or (raw_tok_str and raw_tok_str[-1].isspace())
+            )
             if ends_with_space or is_last:
-                # Assemble the completed word
-                word = "".join(current_word_tokens).strip()
-                if word:
-                    word_boundaries.append(i)
-                    words_phonemized.append(word)
-
-                    # Compute coverage reward for this word
-                    # Use real G2P for accurate IPA phonemization.
-                    # _simple_char_phonemes is ASCII-only and fails
-                    # on IPA targets — it must NOT be used here.
-                    from corpusgen.g2p.manager import G2PManager
-
-                    g2p = G2PManager()
-                    try:
-                        g2p_result = g2p.phonemize(
-                            word, language=self._language
-                        )
-                        word_phonemes = g2p_result.phonemes
-                    except Exception:
-                        word_phonemes = []
-                    new_units = self._compute_new_units(word_phonemes)
-                    if target_size > 0 and new_units:
-                        per_token_rewards[i] = len(new_units) / target_size
-                    else:
-                        per_token_rewards[i] = 0.0
-
-                current_word_tokens = []
+                score_current_word(i)
 
         return TokenRewardResult(
             per_token_rewards=per_token_rewards,
