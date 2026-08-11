@@ -236,6 +236,44 @@ class TestTrainPromptValidation:
         with pytest.raises(ValueError, match="prompts.*empty"):
             trainer.train(prompts=[])
 
+    @pytest.mark.parametrize("invalid_prompt", ["", "   ", "\t\n"])
+    def test_blank_static_prompt_raises(
+        self,
+        invalid_prompt: str,
+        reward: PhoneticReward,
+        default_config: TrainingConfig,
+    ) -> None:
+        trainer = PhonRLTrainer(reward=reward, config=default_config)
+        with pytest.raises(ValueError, match="prompts.*non-empty"):
+            trainer.train(prompts=[invalid_prompt])
+
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_blank_dynamic_prompt_raises(
+        self,
+        mock_load: MagicMock,
+        reward: PhoneticReward,
+        default_config: TrainingConfig,
+    ) -> None:
+        _configure_mock_load(mock_load)
+        trainer = PhonRLTrainer(reward=reward, config=default_config)
+
+        with pytest.raises(ValueError, match="prompt_fn.*non-empty"):
+            trainer.train(prompt_fn=lambda _targets: "  ")
+
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_tokenizer_empty_prompt_encoding_raises(
+        self,
+        mock_load: MagicMock,
+        reward: PhoneticReward,
+        default_config: TrainingConfig,
+    ) -> None:
+        _, mock_tokenizer = _configure_mock_load(mock_load)
+        mock_tokenizer.encode.return_value = []
+        trainer = PhonRLTrainer(reward=reward, config=default_config)
+
+        with pytest.raises(ValueError, match="Tokenizer produced no tokens"):
+            trainer.train(prompts=["A valid prompt."])
+
 
 # =======================================================================
 # PPO MATH TESTS — Pure tensor operations, known inputs/outputs
@@ -392,6 +430,29 @@ class TestComputeGAE:
         expected = rewards - values
         assert torch.allclose(advantages, expected, atol=1e-5)
 
+    def test_padding_mask_terminates_each_row_at_its_last_valid_token(self) -> None:
+        rewards = torch.tensor([
+            [0.0, 1.0, 99.0, 99.0],
+            [0.0, 0.0, 0.0, 2.0],
+        ])
+        values = torch.zeros_like(rewards)
+        mask = torch.tensor([
+            [True, True, False, False],
+            [True, True, True, True],
+        ])
+
+        advantages, returns = compute_gae(
+            rewards,
+            values,
+            gamma=1.0,
+            lam=1.0,
+            mask=mask,
+        )
+
+        assert torch.equal(advantages[0], torch.tensor([1.0, 1.0, 0.0, 0.0]))
+        assert torch.equal(advantages[1], torch.tensor([2.0, 2.0, 2.0, 2.0]))
+        assert torch.equal(returns[~mask], torch.zeros(2))
+
 
 class TestPPOClipLoss:
     """ppo_clip_loss: clipped surrogate objective (Schulman et al., 2017)."""
@@ -459,6 +520,167 @@ class TestPPOClipLoss:
         expected = -torch.min(surr1, surr2).mean()
         assert torch.allclose(loss, expected, atol=1e-5)
 
+    def test_padding_mask_excludes_invalid_actions(self) -> None:
+        old = torch.zeros(1, 4)
+        new = torch.zeros(1, 4)
+        advantages = torch.tensor([[1.0, 3.0, 1000.0, -1000.0]])
+        mask = torch.tensor([[True, True, False, False]])
+
+        loss = ppo_clip_loss(
+            advantages,
+            old,
+            new,
+            clip_epsilon=0.2,
+            mask=mask,
+        )
+
+        assert torch.allclose(loss, torch.tensor(-2.0))
+
+
+class TestPPOValueAlignment:
+    """The critic must evaluate the states that predict response actions."""
+
+    def test_value_head_uses_action_logit_positions(
+        self,
+        reward: PhoneticReward,
+    ) -> None:
+        from types import SimpleNamespace
+
+        class PositionModel(torch.nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.logit_bias = torch.nn.Parameter(torch.zeros(8))
+
+            def forward(self, input_ids, **kwargs):
+                batch_size, sequence_length = input_ids.shape
+                logits = self.logit_bias.view(1, 1, -1).expand(
+                    batch_size, sequence_length, -1
+                )
+                positions = torch.arange(
+                    sequence_length,
+                    dtype=torch.float32,
+                    device=input_ids.device,
+                ).view(1, sequence_length, 1)
+                hidden = positions.expand(batch_size, sequence_length, 1)
+                return SimpleNamespace(logits=logits, hidden_states=(hidden,))
+
+        class CapturingValueHead(torch.nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.scale = torch.nn.Parameter(torch.tensor(1.0))
+                self.seen: list[Any] = []
+
+            def forward(self, hidden_states):
+                self.seen.append(hidden_states.detach().clone())
+                return hidden_states[..., 0] * self.scale
+
+        config = TrainingConfig(
+            model_name="mock",
+            num_steps=1,
+            batch_size=1,
+            kl_coeff=0.0,
+        )
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        trainer._model = PositionModel()
+        trainer._ref_model = PositionModel()
+        trainer._ref_model.load_state_dict(trainer._model.state_dict())
+        trainer._value_head = CapturingValueHead()
+        trainer._optimizer = torch.optim.Adam(
+            list(trainer._model.parameters())
+            + list(trainer._value_head.parameters()),
+            lr=1e-4,
+        )
+
+        trainer._ppo_step(
+            full_ids=torch.tensor([[0, 1, 2, 3, 4]]),
+            prompt_len=2,
+            sentence_reward=1.0,
+        )
+
+        expected_positions = torch.tensor([1.0, 2.0, 3.0])
+        assert len(trainer._value_head.seen) == 2
+        for hidden_states in trainer._value_head.seen:
+            assert torch.equal(hidden_states[0, :, 0], expected_positions)
+
+    def test_terminal_rewards_and_kl_follow_each_rows_mask(
+        self,
+        reward: PhoneticReward,
+    ) -> None:
+        import corpusgen.generate.phon_rl.trainer as trainer_module
+        from corpusgen.generate.phon_rl.value_head import ValueHead
+
+        mock_load = MagicMock()
+        mock_model, _ = _configure_mock_load(mock_load)
+        config = TrainingConfig(
+            model_name="mock",
+            num_steps=1,
+            batch_size=2,
+            kl_coeff=0.5,
+        )
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        trainer._model = mock_model
+        trainer._ref_model = mock_model
+        trainer._value_head = ValueHead(hidden_size=32)
+        trainer._optimizer = torch.optim.Adam(
+            trainer._value_head.parameters(),
+            lr=1e-4,
+        )
+        response_mask = torch.tensor([
+            [True, True, False, False],
+            [True, True, True, True],
+        ])
+        full_ids = torch.tensor([
+            [1, 2, 10, 0, 49, 49],
+            [1, 2, 11, 12, 13, 0],
+        ])
+
+        with (
+            patch(
+                "corpusgen.generate.phon_rl.trainer.compute_kl_penalty",
+                return_value=torch.ones(2, 4),
+            ),
+            patch(
+                "corpusgen.generate.phon_rl.trainer.compute_gae",
+                wraps=compute_gae,
+            ) as mock_gae,
+            patch(
+                "corpusgen.generate.phon_rl.trainer.ppo_clip_loss",
+                wraps=ppo_clip_loss,
+            ) as mock_policy_loss,
+            patch(
+                "corpusgen.generate.phon_rl.trainer._masked_mean",
+                wraps=trainer_module._masked_mean,
+            ) as mock_masked_mean,
+        ):
+            trainer._ppo_step(
+                full_ids=full_ids,
+                prompt_len=2,
+                sentence_reward=[1.0, 2.0],
+                response_mask=response_mask,
+            )
+
+        rewards = mock_gae.call_args.args[0]
+        assert torch.equal(
+            rewards,
+            torch.tensor([
+                [-0.5, 0.5, 0.0, 0.0],
+                [-0.5, -0.5, -0.5, 1.5],
+            ]),
+        )
+        assert torch.equal(mock_gae.call_args.kwargs["mask"], response_mask)
+        normalized_advantages = mock_policy_loss.call_args.args[0]
+        assert torch.equal(
+            normalized_advantages[~response_mask],
+            torch.zeros(2),
+        )
+        assert normalized_advantages[response_mask].mean().item() == pytest.approx(
+            0.0,
+            abs=1e-6,
+        )
+        assert mock_masked_mean.call_count == 2
+        for masked_mean_call in mock_masked_mean.call_args_list:
+            assert torch.equal(masked_mean_call.args[1], response_mask)
+
 
 # =======================================================================
 # WIRING TESTS — Mock only external library boundary
@@ -511,6 +733,219 @@ class TestWiringStaticPrompts:
         trainer = PhonRLTrainer(reward=reward, config=default_config)
         trainer.train(prompts=static_prompts)
         assert trainer.is_initialized is True
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_batch_size_controls_responses_per_step_and_preserves_prompt_cycle(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+        reward: PhoneticReward,
+        static_prompts: list[str],
+    ) -> None:
+        mock_model, mock_tokenizer = _configure_mock_load(mock_load)
+        mock_g2p_cls.return_value.phonemize.return_value.phonemes = []
+        generated_batch_sizes: list[int] = []
+        original_generate = mock_model.generate
+
+        def capture_generate(input_ids, **kwargs):
+            generated_batch_sizes.append(input_ids.shape[0])
+            return original_generate(input_ids, **kwargs)
+
+        mock_model.generate = capture_generate
+        config = TrainingConfig(
+            model_name="mock",
+            num_steps=2,
+            batch_size=3,
+            output_dir=None,
+        )
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        result = trainer.train(prompts=static_prompts)
+
+        assert generated_batch_sizes == [3, 3]
+        assert mock_g2p_cls.return_value.phonemize.call_count == 6
+        assert [
+            call.args[0] for call in mock_tokenizer.encode.call_args_list
+        ] == static_prompts[:2]
+        assert len(result.mean_rewards) == 2
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_variable_length_batch_tracks_valid_response_tokens(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+        reward: PhoneticReward,
+        static_prompts: list[str],
+    ) -> None:
+        mock_model, mock_tokenizer = _configure_mock_load(mock_load)
+        mock_tokenizer.eos_token_id = 0
+        mock_tokenizer.pad_token_id = 0
+        mock_g2p_cls.return_value.phonemize.return_value.phonemes = []
+
+        def variable_length_generate(input_ids, **kwargs):
+            responses = torch.tensor(
+                [
+                    [10, 0, 0, 0],
+                    [11, 12, 13, 0],
+                ],
+                device=input_ids.device,
+            )
+            return torch.cat([input_ids, responses], dim=1)
+
+        mock_model.generate = variable_length_generate
+        config = TrainingConfig(
+            model_name="mock",
+            num_steps=1,
+            batch_size=2,
+            output_dir=None,
+        )
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        trainer._ppo_step = MagicMock(return_value=0.0)
+
+        trainer.train(prompts=static_prompts)
+
+        ppo_kwargs = trainer._ppo_step.call_args.kwargs
+        assert ppo_kwargs["response_mask"].tolist() == [
+            [True, True, False, False],
+            [True, True, True, True],
+        ]
+        assert [
+            call.args[0].tolist()
+            for call in mock_tokenizer.decode.call_args_list
+        ] == [[10, 0], [11, 12, 13, 0]]
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_g2p_failure_aborts_training(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+        reward: PhoneticReward,
+    ) -> None:
+        from types import SimpleNamespace
+
+        _, mock_tokenizer = _configure_mock_load(mock_load)
+        response_text = f"a generated response {'x' * 400}"
+        mock_tokenizer.decode.return_value = response_text
+        mock_g2p_cls.return_value.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            ValueError("unsupported language"),
+        ]
+        config = TrainingConfig(
+            model_name="mock",
+            num_steps=1,
+            batch_size=2,
+            output_dir=None,
+            language="xx-invalid",
+        )
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        covered_before = reward.targets.covered_units
+
+        with pytest.raises(
+            RuntimeError,
+        ) as exc_info:
+            trainer.train(prompts=["Generate a sentence."])
+
+        message = str(exc_info.value)
+        assert "phonemize" in message
+        assert "step 0" in message
+        assert "row 1" in message
+        assert "xx-invalid" in message
+        assert "a generated response" in message
+        assert len(message) < 300
+        assert isinstance(exc_info.value.__cause__, ValueError)
+        assert reward.targets.covered_units == covered_before
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_scoring_failure_leaves_batch_coverage_uncommitted(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+    ) -> None:
+        from types import SimpleNamespace
+
+        _, mock_tokenizer = _configure_mock_load(mock_load)
+        mock_tokenizer.decode.side_effect = ["pat", "bat"]
+        mock_g2p_cls.return_value.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            SimpleNamespace(phonemes=["b"]),
+        ]
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p", "b"],
+            unit="phoneme",
+        )
+        scorer_calls = 0
+
+        def failing_scorer(_phonemes: list[str]) -> float:
+            nonlocal scorer_calls
+            scorer_calls += 1
+            if scorer_calls == 2:
+                raise ValueError("scorer failed")
+            return 1.0
+
+        batch_reward = PhoneticReward(
+            targets=inventory,
+            phonotactic_scorer=failing_scorer,
+        )
+        trainer = PhonRLTrainer(
+            reward=batch_reward,
+            config=TrainingConfig(
+                model_name="mock",
+                num_steps=1,
+                batch_size=2,
+                output_dir=None,
+                language="en-us",
+            ),
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            trainer.train(prompts=["Generate a sentence."])
+
+        message = str(exc_info.value)
+        assert "score" in message
+        assert "step 0" in message
+        assert "row 1" in message
+        assert "en-us" in message
+        assert "bat" in message
+        assert isinstance(exc_info.value.__cause__, ValueError)
+        assert inventory.covered_units == set()
+
+    @patch("corpusgen.g2p.manager.G2PManager")
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_atomic_batch_preserves_sequential_coverage_rewards(
+        self,
+        mock_load: MagicMock,
+        mock_g2p_cls: MagicMock,
+    ) -> None:
+        from types import SimpleNamespace
+
+        _configure_mock_load(mock_load)
+        mock_g2p_cls.return_value.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            SimpleNamespace(phonemes=["p"]),
+        ]
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p"],
+            unit="phoneme",
+        )
+        batch_reward = PhoneticReward(targets=inventory)
+        trainer = PhonRLTrainer(
+            reward=batch_reward,
+            config=TrainingConfig(
+                model_name="mock",
+                num_steps=1,
+                batch_size=2,
+                output_dir=None,
+            ),
+        )
+        trainer._ppo_step = MagicMock(return_value=0.0)
+
+        trainer.train(prompts=["Generate a sentence."])
+
+        assert trainer._ppo_step.call_args.kwargs["sentence_reward"] == [1.0, 0.0]
+        assert inventory.covered_units == {"p"}
 
 
 class TestWiringDynamicPrompts:
@@ -606,6 +1041,40 @@ class TestWiringSeed:
 
 class TestWiringSaveCheckpoint:
     @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_train_saves_configured_output_dir(
+        self,
+        mock_load: MagicMock,
+        reward: PhoneticReward,
+        default_config: TrainingConfig,
+        static_prompts: list[str],
+    ) -> None:
+        mock_model, mock_tokenizer = _configure_mock_load(mock_load)
+        trainer = PhonRLTrainer(reward=reward, config=default_config)
+        result = trainer.train(prompts=static_prompts)
+
+        assert result.checkpoint_path == default_config.output_dir
+        mock_model.save_pretrained.assert_called_once_with(default_config.output_dir)
+        mock_tokenizer.save_pretrained.assert_called_once_with(
+            default_config.output_dir
+        )
+
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
+    def test_train_without_output_dir_does_not_save(
+        self,
+        mock_load: MagicMock,
+        reward: PhoneticReward,
+        static_prompts: list[str],
+    ) -> None:
+        mock_model, mock_tokenizer = _configure_mock_load(mock_load)
+        config = TrainingConfig(model_name="mock", num_steps=1, output_dir=None)
+        trainer = PhonRLTrainer(reward=reward, config=config)
+        result = trainer.train(prompts=static_prompts)
+
+        assert result.checkpoint_path is None
+        mock_model.save_pretrained.assert_not_called()
+        mock_tokenizer.save_pretrained.assert_not_called()
+
+    @patch("corpusgen.generate.phon_rl.trainer._load_model_and_tokenizer")
     def test_save_delegates_to_pretrained(
         self,
         mock_load: MagicMock,
@@ -617,6 +1086,9 @@ class TestWiringSaveCheckpoint:
         mock_model, mock_tokenizer = _configure_mock_load(mock_load)
         trainer = PhonRLTrainer(reward=reward, config=default_config)
         trainer.train(prompts=static_prompts)
+
+        mock_model.save_pretrained.reset_mock()
+        mock_tokenizer.save_pretrained.reset_mock()
 
         save_path = str(tmp_path / "checkpoint")
         trainer.save_checkpoint(save_path)

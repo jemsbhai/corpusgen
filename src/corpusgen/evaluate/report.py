@@ -72,6 +72,10 @@ class EvaluationReport:
     distribution: DistributionMetrics | None = None
     text_quality: TextQualityMetrics | None = None
 
+    def __post_init__(self) -> None:
+        """Normalize target units to a unique, stable-order inventory."""
+        self.target_phonemes = list(dict.fromkeys(self.target_phonemes))
+
     # --- Rendering ---
 
     def render(self, verbosity: Verbosity = Verbosity.NORMAL) -> str:

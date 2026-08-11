@@ -14,6 +14,7 @@ Can operate in two modes:
 from __future__ import annotations
 
 from corpusgen.coverage.tracker import CoverageTracker
+from corpusgen.weights import validate_unit_weights
 
 
 class PhoneticTargetInventory:
@@ -44,6 +45,8 @@ class PhoneticTargetInventory:
         weights: dict[str, float] | None = None,
         max_target_size: int | None = None,
     ) -> None:
+        validate_unit_weights(weights)
+
         # --- Validate mutually exclusive args ---
         if tracker is not None and target_phonemes is not None:
             raise ValueError(

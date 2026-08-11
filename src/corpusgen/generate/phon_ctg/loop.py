@@ -16,6 +16,7 @@ Components:
 from __future__ import annotations
 
 import logging
+import math
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -75,6 +76,10 @@ class StoppingCriteria:
         max_sentences: Maximum number of sentences to accept.
         max_iterations: Maximum loop iterations (backend calls).
         timeout_seconds: Wall-clock time limit in seconds.
+
+    Raises:
+        ValueError: If target coverage is outside [0.0, 1.0] or any optional
+            limit is negative.
     """
 
     target_coverage: float = 1.0
@@ -86,6 +91,19 @@ class StoppingCriteria:
         if not (0.0 <= self.target_coverage <= 1.0):
             raise ValueError(
                 f"target_coverage must be in [0.0, 1.0], got {self.target_coverage}"
+            )
+        for name, value in (
+            ("max_sentences", self.max_sentences),
+            ("max_iterations", self.max_iterations),
+            ("timeout_seconds", self.timeout_seconds),
+        ):
+            if value is not None and value < 0:
+                raise ValueError(f"{name} must be >= 0, got {value}")
+        if self.timeout_seconds is not None and not math.isfinite(
+            self.timeout_seconds
+        ):
+            raise ValueError(
+                f"timeout_seconds must be finite, got {self.timeout_seconds}"
             )
 
 

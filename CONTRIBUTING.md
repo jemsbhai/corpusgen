@@ -39,7 +39,7 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 
 Before you begin, ensure you have the following installed:
 
-- **Python 3.10 or later** (tested on 3.10, 3.12, 3.13)
+- **Python 3.10–3.13** (tested on 3.10, 3.12, 3.13)
 - **[Poetry](https://python-poetry.org/docs/#installation)** for dependency management
 - **[espeak-ng](https://github.com/espeak-ng/espeak-ng)** for grapheme-to-phoneme conversion
 
@@ -49,12 +49,13 @@ Before you begin, ensure you have the following installed:
 |----------|---------|
 | **Ubuntu/Debian** | `sudo apt-get update && sudo apt-get install -y espeak-ng` |
 | **macOS** | `brew install espeak-ng` |
-| **Windows** | Download the `.msi` installer from [espeak-ng releases](https://github.com/espeak-ng/espeak-ng/releases), then set the environment variable: `[Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY", "C:\Program Files\eSpeak NG\libespeak-ng.dll", "User")` |
+| **Windows** | Download the architecture-matching `.msi` from [espeak-ng releases](https://github.com/espeak-ng/espeak-ng/releases). The default DLL path is detected automatically; set `PHONEMIZER_ESPEAK_LIBRARY` only for a custom path. |
 
 Verify the installation:
 
 ```bash
 espeak-ng --version
+python -c "from corpusgen.g2p import G2PManager; result = G2PManager().phonemize('hello'); print(len(result.phonemes), 'phonemes')"
 ```
 
 ### Development Setup
@@ -305,7 +306,9 @@ poetry run pytest tests/ -q --no-header -m "not slow" --cov=corpusgen --cov-repo
    - A link to any related issue (e.g., "Closes #42").
    - Confirmation that tests pass.
 
-4. **CI must pass.** The GitHub Actions workflow runs ruff and pytest across Python 3.10, 3.12, and 3.13.
+4. **CI must pass.** The workflow validates the lock file, runs Ruff and mypy,
+   smoke-tests the wheel with real eSpeak on Ubuntu, macOS, and Windows, and
+   runs pytest across Python 3.10, 3.12, and 3.13 on Linux.
 
 5. **Respond to review feedback** promptly. We aim for constructive, collaborative reviews.
 
@@ -339,7 +342,10 @@ Understanding the module boundaries helps you contribute effectively:
 
 ## Optional Dependencies
 
-corpusgen uses pip extras to keep the core package lightweight. When working on a specific module, install the relevant group:
+corpusgen uses pip extras to keep the core package lightweight. Users can
+install them with commands such as `python -m pip install "corpusgen[llm]"` or
+`python -m pip install "corpusgen[full]"`. Contributors can install the
+corresponding Poetry groups below:
 
 | Extra | Modules it enables | Install command |
 |-------|-------------------|-----------------|
@@ -352,9 +358,11 @@ corpusgen uses pip extras to keep the core package lightweight. When working on 
 
 When adding a new optional dependency:
 
-1. Add it to `[tool.poetry.dependencies]` as `optional = true`.
-2. Add it to the appropriate extras group in `[tool.poetry.extras]`.
-3. Create a corresponding `[tool.poetry.group.<name>.dependencies]` section.
+1. Add it to the appropriate extra in `[project.optional-dependencies]`.
+2. Mirror it in the corresponding `[tool.poetry.group.<name>.dependencies]`
+   section used by contributors.
+3. Add it to the `full` extra and Poetry group when it belongs in the complete
+   development environment.
 4. Guard the import in the source code with a try/except block.
 5. Add a `pytest.importorskip()` call at the top of affected test files.
 

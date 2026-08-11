@@ -106,6 +106,9 @@ class AttributeWordIndex:
     Args:
         language: Language code for G2P conversion.
         batch_size: Number of tokens to phonemize per G2P batch call.
+
+    Raises:
+        ValueError: If ``batch_size`` is not positive.
     """
 
     def __init__(
@@ -113,6 +116,8 @@ class AttributeWordIndex:
         language: str = "en-us",
         batch_size: int = 512,
     ) -> None:
+        if batch_size <= 0:
+            raise ValueError(f"batch_size must be > 0, got {batch_size}")
         self._language = language
         self._batch_size = batch_size
         self._unit_to_tokens: dict[str, set[int]] | None = None

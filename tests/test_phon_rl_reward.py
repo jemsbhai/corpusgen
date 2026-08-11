@@ -175,6 +175,26 @@ class TestPhoneticRewardConstruction:
                 fluency_weight=-0.5,
             )
 
+    @pytest.mark.parametrize(
+        ("weight_name", "invalid_weight"),
+        [
+            ("coverage_weight", float("nan")),
+            ("phonotactic_weight", float("inf")),
+            ("fluency_weight", float("-inf")),
+        ],
+    )
+    def test_nonfinite_weights_rejected(
+        self,
+        phoneme_inventory: PhoneticTargetInventory,
+        weight_name: str,
+        invalid_weight: float,
+    ) -> None:
+        with pytest.raises(ValueError, match=f"{weight_name}.*finite"):
+            PhoneticReward(
+                targets=phoneme_inventory,
+                **{weight_name: invalid_weight},
+            )
+
     def test_phonotactic_scorer_stored(
         self,
         phoneme_inventory: PhoneticTargetInventory,
@@ -527,6 +547,123 @@ class TestTokenRewards:
         for r in result.per_token_rewards:
             assert r >= 0.0
 
+    @pytest.mark.parametrize("boundary_prefix", [" ", "▁", "Ġ"])
+    def test_leading_boundary_tokens_keep_word_rewards_dense(
+        self,
+        boundary_prefix: str,
+    ) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p", "b"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(targets=inventory)
+        mock_g2p = MagicMock()
+        mock_g2p.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            SimpleNamespace(phonemes=["b"]),
+        ]
+
+        with patch("corpusgen.g2p.manager.G2PManager", return_value=mock_g2p):
+            result = reward.token_rewards(
+                token_ids=[0, 1],
+                tokenizer=_MockTokenizer(["pat", f"{boundary_prefix}bat"]),
+            )
+
+        assert result.word_boundaries == [0, 1]
+        assert result.words_phonemized == ["pat", "bat"]
+        assert result.per_token_rewards == pytest.approx([0.5, 0.5])
+
+    def test_target_unit_is_rewarded_only_once_per_response(self) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(targets=inventory)
+        mock_g2p = MagicMock()
+        mock_g2p.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            SimpleNamespace(phonemes=["p"]),
+        ]
+
+        with patch("corpusgen.g2p.manager.G2PManager", return_value=mock_g2p):
+            result = reward.token_rewards(
+                token_ids=[0, 1],
+                tokenizer=_MockTokenizer(["pat", " pat"]),
+            )
+
+        assert result.word_boundaries == [0, 1]
+        assert result.per_token_rewards == pytest.approx([1.0, 0.0])
+
+    def test_sentencepiece_raw_markers_survive_decoded_text_stripping(self) -> None:
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p", "b"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(targets=inventory)
+        mock_g2p = MagicMock()
+        mock_g2p.phonemize.side_effect = [
+            SimpleNamespace(phonemes=["p"]),
+            SimpleNamespace(phonemes=["b"]),
+        ]
+        tokenizer = _MockTokenizer(
+            ["hello", "world"],
+            raw_tokens=["▁hello", "▁world"],
+        )
+
+        with patch("corpusgen.g2p.manager.G2PManager", return_value=mock_g2p):
+            result = reward.token_rewards(
+                token_ids=[0, 1],
+                tokenizer=tokenizer,
+            )
+
+        assert result.word_boundaries == [0, 1]
+        assert result.words_phonemized == ["hello", "world"]
+        assert result.per_token_rewards == pytest.approx([0.5, 0.5])
+        assert [call.args[0] for call in mock_g2p.phonemize.call_args_list] == [
+            "hello",
+            "world",
+        ]
+
+    def test_g2p_failure_is_not_silently_scored_as_zero(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        inventory = PhoneticTargetInventory(
+            target_phonemes=["p"],
+            unit="phoneme",
+        )
+        reward = PhoneticReward(
+            targets=inventory,
+            language="xx-invalid",
+        )
+        mock_g2p = MagicMock()
+        mock_g2p.phonemize.side_effect = ValueError("unsupported language")
+
+        with (
+            patch(
+                "corpusgen.g2p.manager.G2PManager",
+                return_value=mock_g2p,
+            ),
+            pytest.raises(
+                RuntimeError,
+                match="phonemize.*pat.*xx-invalid",
+            ) as exc_info,
+        ):
+            reward.token_rewards(
+                token_ids=[0],
+                tokenizer=_MockTokenizer(["pat"]),
+            )
+
+        assert isinstance(exc_info.value.__cause__, ValueError)
+
 
 # -----------------------------------------------------------------------
 # hierarchical_reward — combines sentence + token
@@ -766,8 +903,13 @@ class _MockTokenizer:
     tokens and batch_decode for lists.
     """
 
-    def __init__(self, tokens: list[str]) -> None:
+    def __init__(
+        self,
+        tokens: list[str],
+        raw_tokens: list[str] | None = None,
+    ) -> None:
         self._tokens = tokens
+        self._raw_tokens = raw_tokens if raw_tokens is not None else tokens
 
     def decode(self, token_id: int, skip_special_tokens: bool = True) -> str:
         if 0 <= token_id < len(self._tokens):
@@ -782,4 +924,6 @@ class _MockTokenizer:
         return [self.decode(tid) for tid in token_ids]
 
     def convert_ids_to_tokens(self, token_id: int) -> str:
-        return self.decode(token_id)
+        if 0 <= token_id < len(self._raw_tokens):
+            return self._raw_tokens[token_id]
+        return ""

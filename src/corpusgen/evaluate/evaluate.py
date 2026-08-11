@@ -46,9 +46,16 @@ def evaluate(
             f"Invalid unit: {unit!r}. Must be one of {valid_units}"
         )
 
-    # --- Step 0: Resolve "phoible" shortcut ---
-    if isinstance(target_phonemes, str) and target_phonemes.lower() == "phoible":
+    # --- Step 0: Resolve the only supported string shortcut ---
+    if isinstance(target_phonemes, str):
+        if target_phonemes.lower() != "phoible":
+            raise ValueError(
+                "target_phonemes must be a list of phonemes, None, or "
+                f"the string 'phoible'; got {target_phonemes!r}"
+            )
+
         from corpusgen.inventory.phoible import PhoibleDataset
+
         ds = PhoibleDataset()
         inv = ds.get_inventory_for_espeak(language)
         target_phonemes = inv.phonemes

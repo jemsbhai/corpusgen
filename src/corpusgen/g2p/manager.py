@@ -13,13 +13,15 @@ from corpusgen.g2p.result import G2PResult
 
 _ESPEAK_INSTALL_HELP = """
 ===================================================================
- espeak-ng not found — required by corpusgen for phoneme conversion
+ espeak-ng unavailable — required by corpusgen for phoneme conversion
 ===================================================================
 
  Install espeak-ng for your platform:
 
-   Windows:  Download .msi from https://github.com/espeak-ng/espeak-ng/releases
-             Then set the environment variable:
+   Windows:  Download the matching-architecture .msi from
+             https://github.com/espeak-ng/espeak-ng/releases
+             The default install path is detected automatically. For a
+             custom install, set the environment variable:
              [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY",
                  "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll", "User")
 
@@ -31,27 +33,65 @@ _ESPEAK_INSTALL_HELP = """
 ===================================================================
 """
 
+def _windows_espeak_library_candidates() -> list[str]:
+    """Return likely MSI-installed DLLs in interpreter-compatible order."""
+    program_files = os.environ.get("PROGRAMFILES")
+    program_files_x86 = os.environ.get("PROGRAMFILES(X86)")
+    roots = (
+        (program_files, program_files_x86)
+        if sys.maxsize > 2**32
+        else (program_files_x86, program_files)
+    )
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for root in roots:
+        if not root:
+            continue
+        candidate = os.path.join(root, "eSpeak NG", "libespeak-ng.dll")
+        normalized = os.path.normcase(candidate)
+        if normalized not in seen:
+            seen.add(normalized)
+            candidates.append(candidate)
+    return candidates
+
 
 def _check_espeak_available() -> None:
-    """Verify espeak-ng is installed and the library is findable."""
+    """Verify that a loadable espeak-ng shared library is available."""
     try:
-        available = EspeakBackend.is_available()
-        if not available:
-            raise RuntimeError(_ESPEAK_INSTALL_HELP)
-    except RuntimeError:
-        # Check if the DLL/so exists but env var is missing
-        if sys.platform == "win32":
-            default_dll = r"C:\Program Files\eSpeak NG\libespeak-ng.dll"
-            if os.path.exists(default_dll) and not os.environ.get(
-                "PHONEMIZER_ESPEAK_LIBRARY"
-            ):
-                raise RuntimeError(
-                    f"espeak-ng is installed but PHONEMIZER_ESPEAK_LIBRARY is not set.\n"
-                    f"Run this in PowerShell (then restart your terminal):\n\n"
-                    f'  [Environment]::SetEnvironmentVariable("PHONEMIZER_ESPEAK_LIBRARY", '
-                    f'"{default_dll}", "User")\n'
-                ) from None
-        raise RuntimeError(_ESPEAK_INSTALL_HELP) from None
+        version = EspeakBackend.version()
+    except RuntimeError as exc:
+        can_try_windows_defaults = sys.platform == "win32" and not os.environ.get(
+            "PHONEMIZER_ESPEAK_LIBRARY"
+        )
+        if not can_try_windows_defaults:
+            raise RuntimeError(
+                f"{_ESPEAK_INSTALL_HELP}\nUnderlying library error: {exc}"
+            ) from exc
+
+        # Respect a backend configured programmatically. Only fall back to the
+        # official MSI paths after the current phonemizer configuration fails.
+        fallback_error: RuntimeError = exc
+        for candidate in _windows_espeak_library_candidates():
+            if not os.path.exists(candidate):
+                continue
+            EspeakBackend.set_library(candidate)
+            try:
+                version = EspeakBackend.version()
+                break
+            except RuntimeError as candidate_exc:
+                fallback_error = candidate_exc
+        else:
+            raise RuntimeError(
+                f"{_ESPEAK_INSTALL_HELP}\nUnderlying library error: {fallback_error}"
+            ) from fallback_error
+
+    if version < (1, 49):
+        version_text = ".".join(str(part) for part in version)
+        raise RuntimeError(
+            "Legacy eSpeak was found, but corpusgen requires espeak-ng "
+            f"(detected version {version_text}).\n{_ESPEAK_INSTALL_HELP}"
+        )
 
 
 # Separator config: space between phonemes, | between words, newline between utterances

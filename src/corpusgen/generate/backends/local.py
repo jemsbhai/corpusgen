@@ -38,7 +38,8 @@ def _cuda_available() -> bool:
     """Check CUDA availability. Isolated for mockability."""
     try:
         import torch
-        return torch.cuda.is_available()
+
+        return bool(torch.cuda.is_available())
     except ImportError:
         return False
 
@@ -253,7 +254,7 @@ class LocalBackend(GenerationBackend):
             return
 
         # Resolve device
-        if self._device is None:
+        if self._device is None or self._device.lower() == "auto":
             self._device = _detect_device()
             logger.info("Auto-detected device: %s", self._device)
 
@@ -345,12 +346,20 @@ class LocalBackend(GenerationBackend):
         # Build generate kwargs
         gen_kwargs: dict[str, Any] = {
             "max_new_tokens": self._max_new_tokens,
-            "temperature": self._temperature,
-            "top_p": self._top_p,
             "do_sample": self._do_sample,
             "num_return_sequences": k,
             "pad_token_id": self._tokenizer.eos_token_id,
         }
+        if self._do_sample:
+            gen_kwargs.update(
+                temperature=self._temperature,
+                top_p=self._top_p,
+            )
+        elif k > 1:
+            # HuggingFace forbids multiple return sequences with greedy
+            # decoding. Deterministic beam search is the corresponding
+            # non-sampling mode when callers request multiple candidates.
+            gen_kwargs["num_beams"] = k
 
         # Guidance strategy: prepare + logits processor
         if self._guidance_strategy is not None:

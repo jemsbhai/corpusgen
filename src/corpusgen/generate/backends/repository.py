@@ -8,6 +8,7 @@ that best target the requested phonetic units.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from corpusgen.generate.phon_ctg.loop import GenerationBackend
@@ -157,12 +158,63 @@ class RepositoryBackend(GenerationBackend):
 
         Raises:
             ImportError: If ``datasets`` package is not installed.
+            ValueError: If *max_samples* is not positive, or if no split can
+                be selected unambiguously from a multi-split dataset, or if
+                *text_column* is absent or does not contain strings.
         """
+        if max_samples is not None and max_samples <= 0:
+            raise ValueError("max_samples must be a positive integer")
+        if not text_column:
+            raise ValueError("text_column must be a non-empty string")
+
         ds = _load_hf_dataset(dataset_name, split=split, **dataset_kwargs)
 
+        # ``datasets.load_dataset(..., split=None)`` returns a DatasetDict.
+        # Prefer its conventional training split; accept a sole custom split;
+        # otherwise require the caller to disambiguate explicitly.
+        if isinstance(ds, Mapping):
+            if "train" in ds:
+                ds = ds["train"]
+            elif len(ds) == 1:
+                ds = next(iter(ds.values()))
+            else:
+                available = ", ".join(str(name) for name in ds)
+                raise ValueError(
+                    "Dataset contains multiple splits "
+                    f"({available}); pass split=... explicitly."
+                )
+
+        column_names = getattr(ds, "column_names", None)
+        if isinstance(column_names, (list, tuple, set, frozenset)):
+            if text_column not in column_names:
+                available = ", ".join(str(name) for name in column_names) or "(none)"
+                raise ValueError(
+                    f"Dataset {dataset_name!r} does not contain text column "
+                    f"{text_column!r}. Available columns: {available}."
+                )
+
         texts: list[str] = []
-        for row in ds:
-            texts.append(row[text_column])
+        for row_index, row in enumerate(ds):
+            if not isinstance(row, Mapping):
+                raise ValueError(
+                    f"Dataset {dataset_name!r} row {row_index} is not a mapping; "
+                    f"cannot read text column {text_column!r}."
+                )
+            if text_column not in row:
+                available = ", ".join(str(name) for name in row) or "(none)"
+                raise ValueError(
+                    f"Dataset {dataset_name!r} does not contain text column "
+                    f"{text_column!r} at row {row_index}. "
+                    f"Available columns: {available}."
+                )
+            text = row[text_column]
+            if not isinstance(text, str):
+                raise ValueError(
+                    f"Dataset {dataset_name!r} text column {text_column!r} must "
+                    f"contain strings; row {row_index} contains "
+                    f"{type(text).__name__}."
+                )
+            texts.append(text)
             if max_samples is not None and len(texts) >= max_samples:
                 break
 

@@ -85,12 +85,15 @@ def evaluate_cmd(
         sys.exit(1)
 
     # Run evaluation
-    report = evaluate(
-        sentence_list,
-        language=language,
-        target_phonemes=target_phonemes,
-        unit=unit,
-    )
+    try:
+        report = evaluate(
+            sentence_list,
+            language=language,
+            target_phonemes=target_phonemes,
+            unit=unit,
+        )
+    except (FileNotFoundError, KeyError, RuntimeError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
     # Output
     if output_format == "json":

@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import FrozenInstanceError
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -228,6 +228,29 @@ class TestComputeCorpusPerplexityValidation:
         tokenizer = MagicMock()
         with pytest.raises(ValueError, match="[Bb]oth.*model.*tokenizer"):
             compute_corpus_perplexity(["hello"], model=None, tokenizer=tokenizer)
+
+    def test_explicit_auto_device_is_resolved(self):
+        model, tokenizer, _ = _make_uniform_mocks()
+        tokenizer.return_value = _make_tokenizer_output([[1, 2, 3]])
+
+        with (
+            patch(
+                "corpusgen.generate.scorers.fluency._detect_device",
+                return_value="cpu",
+            ) as detect_device,
+            patch(
+                "corpusgen.generate.scorers.fluency._load_tokenizer",
+                return_value=tokenizer,
+            ),
+            patch(
+                "corpusgen.generate.scorers.fluency._load_model",
+                return_value=model,
+            ) as load_model,
+        ):
+            compute_corpus_perplexity(["hello"], device="auto")
+
+        detect_device.assert_called_once_with()
+        load_model.assert_called_once_with("gpt2", "cpu")
 
 
 # ---------------------------------------------------------------------------

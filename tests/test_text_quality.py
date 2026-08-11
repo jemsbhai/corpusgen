@@ -287,6 +287,19 @@ class TestTextQualityEdgeCases:
         assert m.flesch_reading_ease is None
         assert m.flesch_kincaid_grade is None
 
+    @pytest.mark.parametrize(
+        ("sentences", "phoneme_sequences"),
+        [
+            (["One.", "Two."], [["w", "uh", "n"]]),
+            (["One."], [["w", "uh", "n"], ["t", "oo"]]),
+        ],
+    )
+    def test_mismatched_sentence_and_phoneme_lengths_raise(
+        self, sentences, phoneme_sequences
+    ):
+        with pytest.raises(ValueError, match="same length"):
+            compute_text_quality_metrics(sentences, phoneme_sequences)
+
     def test_single_word_sentence(self):
         m = compute_text_quality_metrics(["Go."], [["ɡ", "oʊ"]])
         assert m.total_words == 1

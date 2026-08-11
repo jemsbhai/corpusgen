@@ -70,12 +70,20 @@ class NgramPhonotacticModel(PhonotacticConstraint):
     Args:
         order: N-gram order (2 = bigram, 3 = trigram, etc.). Default: 2.
         smoothing: Add-k smoothing constant. Default: 0.01.
+
+    Raises:
+        ValueError: If ``order`` is less than 1 or ``smoothing`` is not
+            positive.
     """
 
     def __init__(self, order: int = 2, smoothing: float = 0.01) -> None:
         if order < 1:
             raise ValueError(
                 f"Order must be >= 1, got {order}."
+            )
+        if smoothing <= 0:
+            raise ValueError(
+                f"smoothing must be > 0, got {smoothing}."
             )
         self._order = order
         self._smoothing = smoothing

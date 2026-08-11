@@ -33,6 +33,9 @@ class GreedySelector(SelectorBase):
         weights: dict[str, float] | None = None,
     ) -> SelectionResult:
         start = time.perf_counter()
+        self._validate_select_inputs(
+            candidates, candidate_phonemes, max_sentences, target_coverage, weights
+        )
 
         # Edge case: empty target → instant full coverage
         if not target_units:
@@ -121,4 +124,3 @@ class GreedySelector(SelectorBase):
             iterations=iterations,
             metadata={},
         )
-

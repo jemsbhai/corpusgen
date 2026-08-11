@@ -95,6 +95,33 @@ class TestSelectSentencesDispatcher:
                 algorithm="greedy",
             )
 
+    def test_unsupported_target_string_raises(self):
+        with pytest.raises(ValueError, match="target_phonemes"):
+            select_sentences(
+                ["s0"],
+                target_phonemes="not-an-inventory",
+                candidate_phonemes=[["a"]],
+            )
+
+    @pytest.mark.parametrize("target_coverage", [-0.1, 1.1])
+    def test_invalid_target_coverage_raises(self, target_coverage):
+        with pytest.raises(ValueError, match="target_coverage"):
+            select_sentences(
+                [],
+                target_phonemes=[],
+                candidate_phonemes=[],
+                target_coverage=target_coverage,
+            )
+
+    def test_negative_max_sentences_raises(self):
+        with pytest.raises(ValueError, match="max_sentences"):
+            select_sentences(
+                [],
+                target_phonemes=[],
+                candidate_phonemes=[],
+                max_sentences=-1,
+            )
+
     def test_target_phonemes_none_derives_from_corpus(self):
         """When target_phonemes is None, derive from all candidates."""
         cands = ["s0", "s1"]

@@ -35,6 +35,16 @@ def runner():
     return CliRunner()
 
 
+@pytest.fixture
+def separate_stderr_runner():
+    """Click runner with separate streams across Click 8.1–8.3."""
+    try:
+        return CliRunner(mix_stderr=False)
+    except TypeError:
+        # Click 8.2+ always keeps the streams separate and removed this arg.
+        return CliRunner()
+
+
 def _mock_inventory(
     phonemes: list[str] | None = None,
     consonants: list[str] | None = None,
@@ -153,6 +163,33 @@ class TestInventoryCommand:
         assert result.exit_code != 0
         assert "not found" in result.output.lower() or "error" in result.output.lower()
 
+    @patch("corpusgen.cli.inventory.get_inventory")
+    def test_missing_phoible_data_reports_actionable_error(self, mock_get, runner):
+        mock_get.side_effect = FileNotFoundError(
+            "PHOIBLE CSV not found. Call PhoibleDataset().download() first."
+        )
+
+        result = runner.invoke(main, ["inventory", "--language", "en-us"])
+
+        assert result.exit_code == 1
+        assert "Error: PHOIBLE CSV not found." in result.output
+        assert "PhoibleDataset().download()" in result.output
+        assert "Traceback" not in result.output
+
+    @patch("corpusgen.cli.inventory.get_inventory")
+    def test_stale_phoible_cache_reports_actionable_error(self, mock_get, runner):
+        mock_get.side_effect = RuntimeError(
+            "Cached PHOIBLE data does not match the pinned revision. "
+            "Call download() to refresh it."
+        )
+
+        result = runner.invoke(main, ["inventory", "--language", "en-us"])
+
+        assert result.exit_code == 1
+        assert "pinned revision" in result.output
+        assert "download()" in result.output
+        assert "Traceback" not in result.output
+
 
 # ===========================================================================
 # corpusgen evaluate
@@ -241,6 +278,40 @@ class TestEvaluateCommand:
         assert result.exit_code == 0
         call_args = mock_eval.call_args
         assert call_args[1]["target_phonemes"] == "phoible"
+
+    @patch("corpusgen.cli.evaluate.evaluate")
+    def test_missing_phoible_data_reports_clean_error(self, mock_eval, runner):
+        mock_eval.side_effect = FileNotFoundError(
+            "PHOIBLE CSV not found. Call PhoibleDataset().download() first."
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                "evaluate", "Hello.", "--language", "en-us",
+                "--target", "phoible",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "PhoibleDataset().download()" in result.output
+        assert "Traceback" not in result.output
+
+    @patch("corpusgen.cli.evaluate.evaluate")
+    def test_invalid_target_reports_clean_error(self, mock_eval, runner):
+        mock_eval.side_effect = ValueError("unsupported target 'bogus'")
+
+        result = runner.invoke(
+            main,
+            [
+                "evaluate", "Hello.", "--language", "en-us",
+                "--target", "bogus",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "unsupported target" in result.output
+        assert "Traceback" not in result.output
 
     @patch("corpusgen.cli.evaluate.evaluate")
     def test_unit_diphone(self, mock_eval, runner):
@@ -364,6 +435,102 @@ class TestSelectCommand:
         call_kwargs = mock_sel.call_args[1]
         assert call_kwargs["algorithm"] == "celf"
 
+    @patch("corpusgen.g2p.manager.G2PManager")
+    def test_distribution_algorithm_inline_json_end_to_end(
+        self, mock_g2p, runner, tmp_path
+    ):
+        mock_g2p.return_value.phonemize_batch.return_value = [
+            MagicMock(phonemes=["a", "a", "a", "b"]),
+            MagicMock(phonemes=["a", "b", "b", "b"]),
+        ]
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Mostly a.\nMostly b.\n")
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--algorithm", "distribution",
+            "--target-distribution", '{"a": 3, "b": 1}',
+            "--max-sentences", "1", "--format", "json",
+        ])
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["algorithm"] == "distribution"
+        assert data["selected_sentences"] == ["Mostly a."]
+
+    @patch("corpusgen.cli.select.select_sentences")
+    def test_distribution_algorithm_json_file(self, mock_sel, runner, tmp_path):
+        mock_sel.side_effect = _mock_select_sentences
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Hello.\n")
+        distribution = tmp_path / "distribution.json"
+        distribution.write_text(json.dumps({"p": 0.7, "t": 0.3}))
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--algorithm", "distribution",
+            "--target-distribution", str(distribution),
+        ])
+
+        assert result.exit_code == 0, result.output
+        assert mock_sel.call_args.kwargs["target_distribution"] == {
+            "p": 0.7,
+            "t": 0.3,
+        }
+
+    def test_distribution_algorithm_requires_target_distribution(
+        self, runner, tmp_path
+    ):
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--algorithm", "distribution",
+        ])
+
+        assert result.exit_code == 2
+        assert "--target-distribution is required" in result.output
+        assert "Traceback" not in result.output
+
+    @pytest.mark.parametrize(
+        ("distribution", "message"),
+        [
+            ("not-json", "Invalid target distribution JSON"),
+            ("[]", "must contain a JSON object"),
+            ('{"a": 0}', "positive and finite"),
+        ],
+    )
+    def test_distribution_algorithm_rejects_invalid_distribution(
+        self, distribution, message, runner, tmp_path
+    ):
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--algorithm", "distribution",
+            "--target-distribution", distribution,
+        ])
+
+        assert result.exit_code == 2
+        assert message in result.output
+        assert "Traceback" not in result.output
+
+    def test_target_distribution_rejected_for_other_algorithms(
+        self, runner, tmp_path
+    ):
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--target-distribution", '{"a": 1}',
+        ])
+
+        assert result.exit_code == 2
+        assert "only valid with --algorithm distribution" in result.output
+
     @patch("corpusgen.cli.select.select_sentences")
     def test_max_sentences_option(self, mock_sel, runner, tmp_path):
         mock_sel.side_effect = _mock_select_sentences
@@ -402,6 +569,28 @@ class TestSelectCommand:
         assert result.exit_code == 0
         call_kwargs = mock_sel.call_args[1]
         assert call_kwargs["target_phonemes"] == "phoible"
+
+    @patch("corpusgen.cli.select.select_sentences")
+    def test_missing_phoible_data_reports_clean_error(
+        self, mock_sel, runner, tmp_path
+    ):
+        mock_sel.side_effect = FileNotFoundError(
+            "PHOIBLE CSV not found. Call PhoibleDataset().download() first."
+        )
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(
+            main,
+            [
+                "select", "--file", str(corpus), "--language", "en-us",
+                "--target", "phoible",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert "PhoibleDataset().download()" in result.output
+        assert "Traceback" not in result.output
 
     @patch("corpusgen.cli.select.select_sentences")
     def test_unit_diphone(self, mock_sel, runner, tmp_path):
@@ -445,6 +634,26 @@ class TestSelectCommand:
         assert out.exists()
         lines = [l for l in out.read_text().splitlines() if l.strip()]
         assert len(lines) == 2
+
+    @patch("corpusgen.cli.select.select_sentences")
+    def test_json_output_file_keeps_stdout_valid_json(
+        self, mock_sel, separate_stderr_runner, tmp_path
+    ):
+        runner = separate_stderr_runner
+        mock_sel.side_effect = _mock_select_sentences
+        corpus = tmp_path / "candidates.txt"
+        corpus.write_text("Sentence one.\nSentence two.\n")
+        out = tmp_path / "selected.txt"
+
+        result = runner.invoke(main, [
+            "select", "--file", str(corpus), "--language", "en-us",
+            "--format", "json", "--output", str(out),
+        ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["selected_sentences"] == ["Sentence one.", "Sentence two."]
+        assert "Wrote 2 sentences" in result.stderr
 
     def test_missing_file_errors(self, runner):
         result = runner.invoke(main, ["select", "--language", "en-us"])
@@ -733,7 +942,73 @@ class TestGenerateCommand:
             "generate", "-b", "repository", "-l", "en-us",
             "--file", str(corpus),
         ])
-        mock_inv.assert_called_once()
+        mock_inv.assert_called_once_with("en-us", source=None)
+
+    @patch(_GEN_PATCHES["GenerationLoop"])
+    @patch(_GEN_PATCHES["RepositoryBackend"])
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_target_selects_phoible_source(
+        self, mock_inv, mock_repo, mock_loop, runner, tmp_path
+    ):
+        mock_inv.return_value = _mock_inventory(
+            phonemes=["p", "t"], source="upsid"
+        )
+        mock_repo.from_texts.return_value = MagicMock()
+        mock_loop.return_value.run.return_value = _mock_generation_result()
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--file", str(corpus), "--target", "UPSID",
+        ])
+
+        assert result.exit_code == 0
+        mock_inv.assert_called_once_with("en-us", source="upsid")
+        targets = mock_loop.call_args.kwargs["targets"]
+        assert targets.tracker.target_units == {"p", "t"}
+
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_invalid_target_source_reports_clean_error(
+        self, mock_inv, separate_stderr_runner, tmp_path
+    ):
+        runner = separate_stderr_runner
+        mock_inv.side_effect = KeyError(
+            "No inventory with source 'invalid' for 'eng'."
+        )
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--file", str(corpus), "--target", "invalid",
+            "--max-sentences", "1",
+        ])
+
+        assert result.exit_code == 1
+        assert "Error:" in result.stderr
+        assert "No inventory with source" in result.stderr
+        assert "Traceback" not in result.output
+
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_missing_phoible_data_reports_actionable_error(
+        self, mock_inv, runner, tmp_path
+    ):
+        mock_inv.side_effect = FileNotFoundError(
+            "PHOIBLE CSV not found. Call PhoibleDataset().download() first."
+        )
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--file", str(corpus),
+        ])
+
+        assert result.exit_code == 1
+        assert "Error: PHOIBLE CSV not found." in result.output
+        assert "PhoibleDataset().download()" in result.output
+        assert "Traceback" not in result.output
 
     @patch(_GEN_PATCHES["GenerationLoop"])
     @patch(_GEN_PATCHES["RepositoryBackend"])
@@ -820,6 +1095,18 @@ class TestGenerateCommand:
         assert targets_arg._weights["p"] == 3.0
         assert targets_arg._weights["t"] == 2.0
 
+    @pytest.mark.parametrize("invalid_value", ["0", "-1", "nan", "inf"])
+    def test_invalid_inline_weight_is_clean_error(
+        self,
+        invalid_value,
+    ):
+        from click import BadParameter
+
+        from corpusgen.cli.generate import _parse_weights
+
+        with pytest.raises(BadParameter, match="positive and finite"):
+            _parse_weights(f"p:{invalid_value}")
+
     # ---------------------------------------------------------------
     # Stopping criteria
     # ---------------------------------------------------------------
@@ -851,6 +1138,35 @@ class TestGenerateCommand:
         assert stopping.max_sentences == 50
         assert stopping.max_iterations == 100
         assert stopping.timeout_seconds == 60.0
+
+    @pytest.mark.parametrize(
+        ("option", "value", "message"),
+        [
+            ("--target-coverage", "nan", "in [0.0, 1.0]"),
+            ("--target-coverage", "1.1", "in [0.0, 1.0]"),
+            ("--max-sentences", "-1", "must be >= 0"),
+            ("--max-iterations", "-1", "must be >= 0"),
+            ("--timeout", "nan", "must be finite"),
+            ("--timeout", "inf", "must be finite"),
+        ],
+    )
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_invalid_stopping_limits_report_clean_click_error_before_inventory(
+        self, mock_inv, option, value, message, runner, tmp_path
+    ):
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--file", str(corpus), option, value,
+        ])
+
+        assert result.exit_code == 2
+        assert f"Invalid value for {option}" in result.output
+        assert message in result.output
+        assert "Traceback" not in result.output
+        mock_inv.assert_not_called()
 
     # ---------------------------------------------------------------
     # Candidates per iteration
@@ -983,6 +1299,31 @@ class TestGenerateCommand:
         lines = [l for l in out.read_text().splitlines() if l.strip()]
         assert len(lines) == 3
 
+    @patch(_GEN_PATCHES["GenerationLoop"])
+    @patch(_GEN_PATCHES["RepositoryBackend"])
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_json_output_file_keeps_stdout_valid_json(
+        self, mock_inv, mock_repo, mock_loop, separate_stderr_runner, tmp_path
+    ):
+        runner = separate_stderr_runner
+        mock_inv.return_value = _mock_inventory()
+        mock_repo.from_texts.return_value = MagicMock()
+        mock_loop.return_value.run.return_value = _mock_generation_result()
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+        out = tmp_path / "generated.txt"
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--file", str(corpus), "--format", "json",
+            "--output", str(out), "--max-sentences", "50",
+        ])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert data["generated_sentences"] == _mock_generation_result().generated_sentences
+        assert "Wrote 3 sentences" in result.stderr
+
     # ---------------------------------------------------------------
     # Validation: cross-backend flag restrictions
     # ---------------------------------------------------------------
@@ -1097,6 +1438,39 @@ class TestGenerateCommand:
         assert scorer._coverage_weight == 0.5
         assert scorer._phonotactic_weight == 0.3
         assert scorer._fluency_weight == 0.2
+
+    @pytest.mark.parametrize(
+        ("option", "invalid_value"),
+        [
+            ("--coverage-weight", "nan"),
+            ("--phonotactic-weight", "inf"),
+            ("--fluency-weight", "-1"),
+        ],
+    )
+    def test_invalid_scorer_weight_is_clean_error(
+        self,
+        runner,
+        tmp_path,
+        option,
+        invalid_value,
+    ):
+        corpus = tmp_path / "pool.txt"
+        corpus.write_text("Hello.\n")
+
+        result = runner.invoke(
+            main,
+            [
+                "generate",
+                "-b", "repository",
+                "-l", "en-us",
+                "--file", str(corpus),
+                option, invalid_value,
+            ],
+        )
+
+        assert result.exit_code != 0
+        assert "finite" in result.output
+        assert "Traceback" not in result.output
 
     @patch(_GEN_PATCHES["GenerationLoop"])
     @patch(_GEN_PATCHES["RepositoryBackend"])
@@ -1335,6 +1709,56 @@ class TestGenerateCommand:
         assert datg_kwargs["boost_strength"] == 7.0  # config wins
         assert datg_kwargs["penalty_strength"] == -7.0
 
+    @pytest.mark.parametrize(
+        ("contents", "message"),
+        [
+            ("{", "Invalid guidance config JSON"),
+            ("[]", "must contain a JSON object"),
+        ],
+    )
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_guidance_config_rejects_invalid_json_at_click_boundary(
+        self, mock_inv, contents, message, runner, tmp_path
+    ):
+        mock_inv.return_value = _mock_inventory(phonemes=["p", "a", "t", "k"])
+        config = tmp_path / "invalid-guidance.json"
+        config.write_text(contents)
+
+        result = runner.invoke(main, [
+            "generate", "-b", "local", "-l", "en-us",
+            "--model", "gpt2", "--guidance", "datg",
+            "--guidance-config", str(config), "--max-sentences", "1",
+        ])
+
+        assert result.exit_code == 2
+        assert message in result.output
+        assert "--guidance-config" in result.output
+        assert "Traceback" not in result.output
+
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_guidance_config_reports_unreadable_file_at_click_boundary(
+        self, mock_inv, runner, tmp_path
+    ):
+        mock_inv.return_value = _mock_inventory(phonemes=["p", "a", "t", "k"])
+        config = tmp_path / "guidance.json"
+        config.write_text("{}")
+
+        with patch(
+            "corpusgen.cli.generate.Path.read_text",
+            side_effect=PermissionError("access denied"),
+        ):
+            result = runner.invoke(main, [
+                "generate", "-b", "local", "-l", "en-us",
+                "--model", "gpt2", "--guidance", "datg",
+                "--guidance-config", str(config), "--max-sentences", "1",
+            ])
+
+        assert result.exit_code == 2
+        assert "Could not read guidance config" in result.output
+        assert "access denied" in result.output
+        assert "--guidance-config" in result.output
+        assert "Traceback" not in result.output
+
     @patch("corpusgen.cli.generate.PhonRLStrategy")
     @patch(_GEN_PATCHES["GenerationLoop"])
     @patch(_GEN_PATCHES["LocalBackend"])
@@ -1464,6 +1888,28 @@ class TestGenerateCommand:
         assert call_kwargs["split"] == "train"
         assert call_kwargs["max_samples"] == 500
         assert call_kwargs["language"] == "en-us"
+
+    @patch(_GEN_PATCHES["RepositoryBackend"])
+    @patch(_GEN_PATCHES["get_inventory"])
+    def test_dataset_missing_text_column_reports_clean_error(
+        self, mock_inv, mock_repo, runner
+    ):
+        mock_inv.return_value = _mock_inventory()
+        mock_repo.from_huggingface.side_effect = ValueError(
+            "Dataset 'example/data' does not contain text column 'missing'. "
+            "Available columns: sentence."
+        )
+
+        result = runner.invoke(main, [
+            "generate", "-b", "repository", "-l", "en-us",
+            "--dataset", "example/data", "--text-column", "missing",
+            "--max-sentences", "1",
+        ])
+
+        assert result.exit_code == 1
+        assert "does not contain text column 'missing'" in result.output
+        assert "Available columns: sentence" in result.output
+        assert "Traceback" not in result.output
 
     @patch(_GEN_PATCHES["GenerationLoop"])
     @patch(_GEN_PATCHES["RepositoryBackend"])

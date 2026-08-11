@@ -58,6 +58,9 @@ class StochasticGreedySelector(SelectorBase):
     ) -> SelectionResult:
         start = time.perf_counter()
         rng = random.Random(self._seed)
+        self._validate_select_inputs(
+            candidates, candidate_phonemes, max_sentences, target_coverage, weights
+        )
 
         # Edge case: empty target
         if not target_units:
@@ -68,6 +71,14 @@ class StochasticGreedySelector(SelectorBase):
 
         # Edge case: no candidates
         if not candidates:
+            return self._make_result(
+                [], candidates, target_units, set(), 0.0, 0,
+                time.perf_counter() - start,
+            )
+
+        # A zero budget is valid and selects nothing.  Handle it before
+        # computing the stochastic sample size, which divides by the budget.
+        if max_sentences == 0:
             return self._make_result(
                 [], candidates, target_units, set(), 0.0, 0,
                 time.perf_counter() - start,
@@ -116,18 +127,18 @@ class StochasticGreedySelector(SelectorBase):
                     best_gain = gain
                     best_idx = idx
 
-            # No candidate in sample adds anything
-            if best_gain == 0:
-                # Check if ANY remaining candidate has gain > 0
-                any_gain = False
+            # If the sample misses every useful candidate, scan the remaining
+            # pool once.  This also terminates when all weighted gains are zero.
+            if best_gain <= 0:
                 for idx in available:
-                    if len(candidate_units[idx] - covered) > 0:
-                        any_gain = True
-                        break
-                if not any_gain:
+                    gain = self._weighted_gain(
+                        candidate_units[idx] - covered, weights
+                    )
+                    if gain > best_gain:
+                        best_gain = gain
+                        best_idx = idx
+                if best_idx == -1:
                     break
-                # Otherwise continue sampling
-                continue
 
             selected_indices.append(best_idx)
             covered |= candidate_units[best_idx]

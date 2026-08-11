@@ -225,6 +225,19 @@ class TestDeviceDetection:
     def test_auto_detect_cpu_fallback(self, _mock):
         assert _detect_device() == "cpu"
 
+    @patch("corpusgen.generate.backends.local._load_tokenizer")
+    @patch("corpusgen.generate.backends.local._load_model")
+    @patch("corpusgen.generate.backends.local._detect_device", return_value="cpu")
+    def test_explicit_auto_is_resolved(self, detect, load_model, load_tokenizer):
+        load_tokenizer.return_value = _mock_tokenizer()
+        load_model.return_value = _mock_model()
+
+        backend = LocalBackend(model_name="gpt2", device="auto")
+        backend.generate(target_units=["p"], k=1)
+
+        detect.assert_called_once_with()
+        assert load_model.call_args.kwargs["device"] == "cpu"
+
 
 # ---------------------------------------------------------------------------
 # Prompt formatting
@@ -335,6 +348,25 @@ class TestGenerate:
         candidates = backend.generate(target_units=["s"], k=3)
 
         assert len(candidates) <= 3
+
+    @patch("corpusgen.generate.backends.local._load_tokenizer")
+    @patch("corpusgen.generate.backends.local._load_model")
+    def test_multiple_greedy_candidates_use_beam_search(
+        self, mock_load_model, mock_load_tok
+    ):
+        mock_load_tok.return_value = _mock_tokenizer()
+        model = _mock_model()
+        mock_load_model.return_value = model
+
+        backend = LocalBackend(model_name="gpt2", device="cpu", do_sample=False)
+        backend.generate(target_units=["s"], k=3)
+
+        kwargs = model.generate.call_args.kwargs
+        assert kwargs["do_sample"] is False
+        assert kwargs["num_return_sequences"] == 3
+        assert kwargs["num_beams"] == 3
+        assert "temperature" not in kwargs
+        assert "top_p" not in kwargs
 
 
 # ---------------------------------------------------------------------------

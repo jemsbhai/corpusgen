@@ -36,17 +36,9 @@ class DistributionAwareSelector(SelectorBase):
         unit: str = "phoneme",
     ) -> None:
         super().__init__(unit=unit)
-        if not target_distribution:
-            raise ValueError("target_distribution must be non-empty")
-        if any(v <= 0 for v in target_distribution.values()):
-            raise ValueError(
-                "All target_distribution values must be positive"
-            )
-        # Normalize
-        total = sum(target_distribution.values())
-        self._target_dist = {
-            k: v / total for k, v in target_distribution.items()
-        }
+        self._target_dist = self._normalize_target_distribution(
+            target_distribution
+        )
 
     @property
     def algorithm_name(self) -> str:
@@ -62,6 +54,9 @@ class DistributionAwareSelector(SelectorBase):
         weights: dict[str, float] | None = None,
     ) -> SelectionResult:
         start = time.perf_counter()
+        self._validate_select_inputs(
+            candidates, candidate_phonemes, max_sentences, target_coverage, weights
+        )
 
         # Edge case: empty target
         if not target_units:
@@ -121,7 +116,7 @@ class DistributionAwareSelector(SelectorBase):
 
             best_idx = -1
             best_score = float("inf")  # Lower KL is better
-            best_gain = 0  # Tie-break by coverage gain
+            best_gain = 0.0  # Tie-break by coverage gain
 
             for idx in available:
                 # Compute hypothetical corpus counts if we add this candidate
@@ -212,4 +207,3 @@ class DistributionAwareSelector(SelectorBase):
             if p > 0:
                 kl += p * math.log(p / q)
         return kl
-

@@ -7,14 +7,19 @@ and provides efficient lookup by ISO 639-3, Glottocode, or language name.
 from __future__ import annotations
 
 import csv
+import hashlib
+import tempfile
 from pathlib import Path
 from typing import Any
 
 from corpusgen.inventory.models import FEATURE_NAMES, Inventory, Segment
 
+_PHOIBLE_COMMIT = "b92abff4f4ca2544eece4d9eff5c707f8d508d0c"
 _PHOIBLE_CSV_URL = (
-    "https://github.com/phoible/dev/blob/master/data/phoible.csv?raw=true"
+    "https://raw.githubusercontent.com/phoible/dev/"
+    f"{_PHOIBLE_COMMIT}/data/phoible.csv"
 )
+_PHOIBLE_CSV_SHA256 = "395e0977c3a5402af9cd5effd4ffdf0e47396336241fac534a4706e3cd8a7ecf"
 _CSV_FILENAME = "phoible.csv"
 
 
@@ -32,6 +37,7 @@ class PhoibleDataset:
     """
 
     def __init__(self, cache_dir: Path | None = None) -> None:
+        self._uses_default_cache = cache_dir is None
         if cache_dir is None:
             cache_dir = Path.home() / ".corpusgen"
         self._cache_dir = Path(cache_dir)
@@ -97,6 +103,14 @@ class PhoibleDataset:
                 f"PHOIBLE CSV not found at {self._csv_path}. "
                 f"Call download() first or provide a valid cache_dir."
             )
+        if self._uses_default_cache:
+            actual_hash = _sha256_file(self._csv_path)
+            if actual_hash != _PHOIBLE_CSV_SHA256:
+                raise RuntimeError(
+                    "Cached PHOIBLE data does not match corpusgen's pinned "
+                    f"revision {_PHOIBLE_COMMIT}. Call download() to refresh "
+                    f"{self._csv_path}."
+                )
 
         # Reset state
         self._inventories.clear()
@@ -123,7 +137,7 @@ class PhoibleDataset:
             for row in rows:
                 segments.append(_parse_segment(row))
 
-            dialect = first["SpecificDialect"]
+            dialect: str | None = first["SpecificDialect"]
             if dialect == "NA" or not dialect:
                 dialect = None
 
@@ -371,19 +385,53 @@ class PhoibleDataset:
     # --- Download ---
 
     def download(self) -> None:
-        """Download phoible.csv from GitHub and cache locally.
+        """Download a pinned, checksum-verified PHOIBLE CSV release.
 
-        Creates the cache directory if it doesn't exist.
+        Creates the cache directory if it doesn't exist. The download is
+        written atomically, so a failed or corrupt transfer cannot replace a
+        previously valid cache.
+
+        Raises:
+            RuntimeError: If the downloaded file fails checksum verification.
         """
         import urllib.request
 
         self._cache_dir.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(_PHOIBLE_CSV_URL, self._csv_path)
+        with tempfile.NamedTemporaryFile(
+            dir=self._cache_dir,
+            prefix="phoible-",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
+
+        try:
+            urllib.request.urlretrieve(_PHOIBLE_CSV_URL, temp_path)
+
+            actual_hash = _sha256_file(temp_path)
+            if actual_hash != _PHOIBLE_CSV_SHA256:
+                raise RuntimeError(
+                    "PHOIBLE download checksum mismatch: "
+                    f"expected {_PHOIBLE_CSV_SHA256}, got {actual_hash}"
+                )
+
+            temp_path.replace(self._csv_path)
+        finally:
+            temp_path.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
 # Internal CSV parsing helpers
 # ---------------------------------------------------------------------------
+
+
+def _sha256_file(path: Path) -> str:
+    """Return a file's SHA-256 digest without loading it all into memory."""
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _parse_segment(row: dict[str, str]) -> Segment:

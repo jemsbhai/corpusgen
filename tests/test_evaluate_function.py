@@ -116,6 +116,10 @@ class TestEvaluateDerivedInventory:
     """When target_phonemes is None, evaluate() should derive the inventory
     from the phonemes actually found in the corpus."""
 
+    def test_unsupported_target_string_raises(self):
+        with pytest.raises(ValueError, match="target_phonemes"):
+            evaluate([], target_phonemes="not-an-inventory")
+
     def test_none_target_gives_full_coverage(self, english_sentences):
         report = evaluate(english_sentences, language="en-us", target_phonemes=None)
         assert report.coverage == pytest.approx(1.0)

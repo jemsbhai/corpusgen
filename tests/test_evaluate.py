@@ -71,6 +71,22 @@ class TestEvaluationReport:
     def test_total_sentences(self, minimal_report):
         assert minimal_report.total_sentences == 3
 
+    def test_duplicate_targets_are_deduplicated_for_reporting(self):
+        report = EvaluationReport(
+            language="en-us",
+            unit="phoneme",
+            target_phonemes=["p", "b", "p"],
+            covered_phonemes={"p", "b"},
+            missing_phonemes=set(),
+            coverage=1.0,
+            phoneme_counts={"p": 1, "b": 1},
+            total_sentences=1,
+        )
+
+        assert report.target_phonemes == ["p", "b"]
+        assert "(2/2 phonemes)" in report.render(Verbosity.MINIMAL)
+        assert report.to_dict()["target_phonemes"] == ["p", "b"]
+
 
 # --- Verbosity levels ---
 

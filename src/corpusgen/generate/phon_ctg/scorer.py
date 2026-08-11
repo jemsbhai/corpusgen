@@ -17,6 +17,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from corpusgen.generate.phon_ctg.targets import PhoneticTargetInventory
+from corpusgen.weights import validate_component_weights
 
 
 @dataclass
@@ -72,6 +73,14 @@ class PhoneticScorer:
         fluency_weight: float = 0.0,
         readability_weight: float = 0.0,
     ) -> None:
+        validate_component_weights(
+            {
+                "coverage_weight": coverage_weight,
+                "phonotactic_weight": phonotactic_weight,
+                "fluency_weight": fluency_weight,
+                "readability_weight": readability_weight,
+            }
+        )
         self._targets = targets
         self._phonotactic_scorer = phonotactic_scorer
         self._fluency_scorer = fluency_scorer

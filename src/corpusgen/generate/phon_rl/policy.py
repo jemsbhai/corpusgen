@@ -52,7 +52,7 @@ def _load_peft_adapter(model: Any, adapter_path: str) -> Any:
         ImportError: If peft is not installed.
         FileNotFoundError: If the adapter path does not exist.
     """
-    from peft import PeftModel  # type: ignore[import-untyped]
+    from peft import PeftModel  # type: ignore[import-not-found, import-untyped]
 
     logger.info("Loading PEFT adapter from %s", adapter_path)
     model = PeftModel.from_pretrained(model, adapter_path)

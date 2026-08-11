@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import math
 from abc import ABC, abstractmethod
 
 from corpusgen.select.result import SelectionResult
+from corpusgen.weights import validate_unit_weights
 
 
 class SelectorBase(ABC):
@@ -108,6 +110,61 @@ class SelectorBase(ABC):
         if weights is None:
             return float(len(new_units))
         return sum(weights.get(u, 1.0) for u in new_units)
+
+    @staticmethod
+    def _validate_limits(
+        max_sentences: int | None,
+        target_coverage: float,
+    ) -> None:
+        """Validate budget and stopping-threshold arguments."""
+        if max_sentences is not None and max_sentences < 0:
+            raise ValueError(
+                f"max_sentences must be non-negative or None, got {max_sentences}"
+            )
+        if not 0.0 <= target_coverage <= 1.0:
+            raise ValueError(
+                f"target_coverage must be between 0.0 and 1.0, got {target_coverage}"
+            )
+
+    @staticmethod
+    def _normalize_target_distribution(
+        target_distribution: dict[str, float],
+    ) -> dict[str, float]:
+        """Validate and normalize a strictly positive finite distribution."""
+        if not target_distribution:
+            raise ValueError("target_distribution must be non-empty")
+        if any(
+            not math.isfinite(value) or value <= 0
+            for value in target_distribution.values()
+        ):
+            raise ValueError(
+                "All target_distribution values must be positive and finite"
+            )
+        total = sum(target_distribution.values())
+        if not math.isfinite(total) or total <= 0:
+            raise ValueError("target_distribution total must be positive and finite")
+        return {
+            unit: value / total
+            for unit, value in target_distribution.items()
+        }
+
+    @classmethod
+    def _validate_select_inputs(
+        cls,
+        candidates: list[str],
+        candidate_phonemes: list[list[str]],
+        max_sentences: int | None,
+        target_coverage: float,
+        weights: dict[str, float] | None,
+    ) -> None:
+        """Validate arguments common to every selector implementation."""
+        if len(candidate_phonemes) != len(candidates):
+            raise ValueError(
+                f"candidate_phonemes length ({len(candidate_phonemes)}) must match "
+                f"candidates length ({len(candidates)})"
+            )
+        cls._validate_limits(max_sentences, target_coverage)
+        validate_unit_weights(weights)
 
     def _extract_unit_list(self, phonemes: list[str]) -> list[str]:
         """Extract coverage units preserving duplicates for frequency counting.

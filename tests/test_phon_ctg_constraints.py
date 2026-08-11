@@ -86,6 +86,11 @@ class TestNgramConstruction:
         with pytest.raises(ValueError, match="[Oo]rder"):
             NgramPhonotacticModel(order=-1)
 
+    @pytest.mark.parametrize("smoothing", [0.0, -0.01])
+    def test_non_positive_smoothing_rejected(self, smoothing):
+        with pytest.raises(ValueError, match="smoothing"):
+            NgramPhonotacticModel(smoothing=smoothing)
+
     def test_is_phonotactic_constraint(self):
         model = NgramPhonotacticModel()
         assert isinstance(model, PhonotacticConstraint)

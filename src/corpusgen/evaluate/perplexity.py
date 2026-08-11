@@ -159,7 +159,7 @@ def compute_corpus_perplexity(
             _load_tokenizer,
         )
 
-        if device is None:
+        if device is None or device.lower() == "auto":
             device = _detect_device()
 
         logger.info("Loading perplexity model %s on %s", model_name, device)
@@ -181,8 +181,8 @@ def compute_corpus_perplexity(
     # ------------------------------------------------------------------
     # Batched inference
     # ------------------------------------------------------------------
-    import torch
-    import torch.nn.functional as F
+    import torch  # type: ignore[import-not-found]
+    import torch.nn.functional as F  # type: ignore[import-not-found]
 
     all_sentence_ppls: list[float] = []
     total_nll = 0.0

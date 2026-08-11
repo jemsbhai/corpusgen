@@ -81,6 +81,24 @@ class TestPerplexityFluencyScorerConstruction:
         scorer = PerplexityFluencyScorer(model_name="gpt2")
         assert scorer.model_name == "gpt2"
 
+    @patch("corpusgen.generate.scorers.fluency._detect_device", return_value="cpu")
+    @patch("corpusgen.generate.scorers.fluency._load_tokenizer")
+    @patch("corpusgen.generate.scorers.fluency._load_model")
+    def test_explicit_auto_device_is_resolved(
+        self, load_model, load_tokenizer, detect_device
+    ):
+        from corpusgen.generate.scorers.fluency import PerplexityFluencyScorer
+
+        model, tokenizer = _make_mock_model_and_tokenizer()
+        load_model.return_value = model
+        load_tokenizer.return_value = tokenizer
+
+        scorer = PerplexityFluencyScorer(model_name="gpt2", device="auto")
+        scorer._ensure_loaded()
+
+        detect_device.assert_called_once_with()
+        load_model.assert_called_once_with("gpt2", "cpu")
+
 
 class TestPerplexityFluencyScorerScoring:
     """Test scoring behavior with mocked models."""

@@ -10,6 +10,35 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from collections.abc import Mapping
+
+
+def validate_unit_weights(
+    weights: Mapping[str, float] | None,
+) -> None:
+    """Validate optional priority weights used by coverage algorithms.
+
+    Explicit weights must name a unit and be finite and strictly positive.
+    Units omitted from the mapping continue to use the default weight 1.0.
+    """
+    if weights is None:
+        return
+    for unit, weight in weights.items():
+        if not isinstance(unit, str) or not unit:
+            raise ValueError("Weight keys must be non-empty unit strings")
+        if not math.isfinite(weight) or weight <= 0:
+            raise ValueError(
+                f"Weight for unit {unit!r} must be positive and finite, got {weight}"
+            )
+
+
+def validate_component_weights(weights: Mapping[str, float]) -> None:
+    """Validate non-negative finite weights in composite scores/rewards."""
+    for name, weight in weights.items():
+        if not math.isfinite(weight) or weight < 0:
+            raise ValueError(
+                f"{name} must be finite and >= 0, got {weight}"
+            )
 
 
 def uniform_weights(target_units: set[str]) -> dict[str, float]:
@@ -108,8 +137,9 @@ def linguistic_class_weights(
 ) -> dict[str, float]:
     """Weight units by their phonological class (vowel, consonant, etc.).
 
-    Uses panphon to classify IPA segments. Multi-segment units (diphones,
-    triphones) are not classified and receive the default weight.
+    Uses lightweight IPA symbol heuristics to classify segments. Multi-segment
+    units (diphones, triphones) are not classified and receive the default
+    weight.
 
     Args:
         target_units: Set of phonetic units to weight.
